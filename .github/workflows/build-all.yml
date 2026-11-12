@@ -37,7 +37,7 @@ jobs:
         run: npm install
 
       - name: Sync Capacitor Web Assets
-        run: npx cap sync android
+        run: npx --yes @capacitor/cli sync android
 
       - name: Make Gradle Wrapper Executable
         run: chmod +x android/gradlew
