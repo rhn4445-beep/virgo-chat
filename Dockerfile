@@ -1,5 +1,5 @@
-# Build stage: compile the Go gateway for Linux
-FROM golang:1.24-alpine AS builder
+# Build stage: standard Go build environment with git and certificates
+FROM golang:1.24 AS builder
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ RUN go mod download
 
 # Copy source code and build statically linked binary
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o gateway main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o gateway main.go
 
 # Runtime stage: minimal Alpine container
 FROM alpine:latest
