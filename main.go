@@ -653,6 +653,25 @@ func main() {
 		go client.readPump(hub)
 	})
 
+	// Automatic 24/7 Keep-Alive for Render and Cloud Hosting
+	extURL := os.Getenv("RENDER_EXTERNAL_URL")
+	if extURL == "" {
+		extURL = os.Getenv("KEEP_ALIVE_URL")
+	}
+	if extURL != "" {
+		log.Printf("24/7 Cloud keep-alive active for: %s", extURL)
+		go func() {
+			ticker := time.NewTicker(10 * time.Minute)
+			for range ticker.C {
+				resp, err := http.Get(extURL + "/")
+				if err == nil {
+					resp.Body.Close()
+					log.Printf("Keep-alive ping sent to %s", extURL)
+				}
+			}
+		}()
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
