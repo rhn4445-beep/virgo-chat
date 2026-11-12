@@ -151,6 +151,7 @@
              data-auto_prompt="false">
         </div>
         <div id="auth-signin-btn" class="g_id_signin" data-type="icon" data-shape="circle" data-theme="filled_black"></div>
+        <button id="quick-login-btn" onclick="promptQuickLogin()" style="background:#00a884;color:white;border:none;border-radius:18px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">Sign In</button>
 
         <img id="my-avatar-btn" src="https://ui-avatars.com/api/?name=User&background=00a884&color=fff" title="Profile Settings" onclick="toggleProfileDrawer(true)" style="display: none;">
       </div>
@@ -307,9 +308,20 @@
       location.reload();
     }
 
+    function promptQuickLogin() {
+      const email = prompt("Enter your email or username to sign in:", "rhn4445@gmail.com");
+      if (email && email.trim()) {
+        const clean = email.trim().toLowerCase();
+        localStorage.setItem("virgo_auth_user", clean);
+        initAuthenticatedSession(clean);
+      }
+    }
+
     async function initAuthenticatedSession(user) {
       myId = user.toLowerCase().trim();
       document.getElementById("auth-signin-btn").style.display = "none";
+      const qBtn = document.getElementById("quick-login-btn");
+      if (qBtn) qBtn.style.display = "none";
       document.getElementById("my-avatar-btn").style.display = "block";
       document.getElementById("profile-email-text").innerText = myId;
 
