@@ -1,0 +1,23 @@
+{
+  "name": "Virgo Messenger",
+  "short_name": "Virgo",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111b21",
+  "theme_color": "#202c33",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

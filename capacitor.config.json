@@ -1,0 +1,9 @@
+{
+  "appId": "com.virgo.chat",
+  "appName": "Virgo",
+  "webDir": "www",
+  "server": {
+    "url": "https://squander-viral-stick.ngrok-free.dev",
+    "cleartext": true
+  }
+}

@@ -1,0 +1,50 @@
+# Binaries & Executables
+*.exe
+*.dll
+*.so
+*.dylib
+gateway
+gateway-linux
+server.exe
+node.exe
+cloudflared.exe
+
+# Local Databases & Uploads
+*.db
+*.db-journal
+uploads/
+virgo_desktop_data/
+
+# Logs & Temporary files
+*.log
+*.tmp
+
+# Node.js
+node_modules/
+npm
+npm.cmd
+npm.ps1
+npx
+npx.cmd
+npx.ps1
+nodevars.bat
+
+# Python & PyInstaller
+__pycache__/
+*.py[cod]
+build/
+dist/
+
+# Android & Gradle
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+android/*.iml
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
