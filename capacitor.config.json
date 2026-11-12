@@ -1,9 +1,5 @@
 {
   "appId": "com.virgo.chat",
   "appName": "Virgo",
-  "webDir": "www",
-  "server": {
-    "url": "https://virgo-chat.onrender.com",
-    "cleartext": true
-  }
+  "webDir": "www"
 }

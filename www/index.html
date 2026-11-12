@@ -818,7 +818,7 @@
   <!-- DESKTOP LEFT NAVIGATION RAIL -->
   <div id="desktop-nav-rail">
     <div class="rail-logo-btn" onclick="location.reload()" title="Virgo Home">
-      <img src="/icon.png" alt="Virgo">
+      <img src="icon.png" alt="Virgo">
     </div>
 
     <div class="rail-nav-items">
@@ -837,7 +837,7 @@
     </div>
 
     <div class="rail-profile-btn" onclick="toggleProfileDrawer(true)" title="My Profile">
-      <img id="rail-my-avatar" src="/icon.png" alt="Profile">
+      <img id="rail-my-avatar" src="icon.png" alt="Profile">
     </div>
   </div>
 
@@ -845,7 +845,7 @@
   <div id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-title-wrap">
-        <img class="mobile-logo-img" src="/icon.png" alt="Virgo" onclick="location.reload()">
+        <img class="mobile-logo-img" src="icon.png" alt="Virgo" onclick="location.reload()">
         <span class="sidebar-title">Virgo <span class="sidebar-badge">E2EE</span></span>
       </div>
       <div class="sidebar-header-actions">
@@ -883,7 +883,7 @@
       </div>
       <div class="story-item" onclick="alert('Virgo Starlight Feed active.')">
         <div class="story-ring">
-          <img class="story-avatar" src="/icon.png" alt="Virgo">
+          <img class="story-avatar" src="icon.png" alt="Virgo">
         </div>
         <span class="story-name">Virgo ✦</span>
       </div>
@@ -902,7 +902,7 @@
     <!-- UPDATES / MOMENTS TAB VIEW -->
     <div id="updates-tab-view" style="display:none;flex:1;overflow-y:auto;padding:16px;">
       <div style="background:var(--bg-card);border:1px solid var(--border-starlight);border-radius:14px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="promptNewStatusUpdate()">
-        <img id="status-user-avatar" src="/icon.png" style="width:48px;height:48px;border-radius:50%;border:1.5px solid var(--virgo-gold);">
+        <img id="status-user-avatar" src="icon.png" style="width:48px;height:48px;border-radius:50%;border:1.5px solid var(--virgo-gold);">
         <div>
           <div style="font-weight:600;font-size:15px;color:#fff;">My Moment</div>
           <div style="font-size:12px;color:var(--text-muted);">Share an update with your contacts</div>
@@ -956,7 +956,7 @@
       </div>
       <div class="drawer-scroll-body">
         <div class="avatar-picker-wrap">
-          <img id="drawer-avatar-img" src="/icon.png" alt="Avatar">
+          <img id="drawer-avatar-img" src="icon.png" alt="Avatar">
           <button class="avatar-camera-btn" onclick="document.getElementById('profile-pic-uploader').click()" title="Change photo">
             <svg viewBox="0 0 24 24"><path d="M12 12c1.65 0 3-1.35 3-3s-1.35-3-3-3-3 1.35-3 3 1.35 3 3 3zm0 2c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm6.5-6H17l-1.83-2H8.83L7 8H4.5C3.12 8 2 9.12 2 10.5v9C2 20.88 3.12 22 4.5 22h14c1.38 0 2.5-1.12 2.5-2.5v-9c0-1.38-1.12-2.5-2.5-2.5z"/></svg>
           </button>
@@ -989,7 +989,7 @@
     <!-- PLACEHOLDER WHEN NO CHAT IS OPEN -->
     <div id="empty-chat-screen">
       <div class="empty-symbol">
-        <img src="/icon.png" alt="Virgo">
+        <img src="icon.png" alt="Virgo">
       </div>
       <h2 class="empty-headline">Virgo Messenger</h2>
       <div class="empty-subline">✦ Celestial Speed • End-to-End Encrypted ✦</div>
@@ -1005,7 +1005,7 @@
           <button id="chat-back-btn" onclick="closeChatMobile()" title="Back">
             <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
           </button>
-          <img id="header-contact-avatar" src="/icon.png" alt="Avatar">
+          <img id="header-contact-avatar" src="icon.png" alt="Avatar">
           <div class="header-user-meta">
             <div id="header-user-name">Select Contact</div>
             <div class="header-status-line">
@@ -1097,7 +1097,7 @@
   <!-- WELCOME / LOGIN MODAL -->
   <div id="welcome-screen-modal">
     <div class="welcome-box">
-      <img class="welcome-logo-emblem" src="/icon.png" alt="Virgo">
+      <img class="welcome-logo-emblem" src="icon.png" alt="Virgo">
       <h2 class="welcome-header-title">Welcome to Virgo</h2>
       <p class="welcome-header-sub">Private, decentralized celestial messaging with end-to-end encryption.</p>
 
@@ -1125,7 +1125,7 @@
   <div class="virgo-modal" id="new-chat-dialog">
     <div class="virgo-dialog">
       <div style="display:flex;align-items:center;gap:12px;">
-        <img src="/icon.png" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--virgo-gold);">
+        <img src="icon.png" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--virgo-gold);">
         <div>
           <h3 style="color:#fff;font-size:17px;font-weight:700;">Start New Chat</h3>
           <p style="color:var(--text-muted);font-size:12px;">Message any user on Virgo</p>
@@ -1141,6 +1141,11 @@
 
   <!-- JAVASCRIPT CORE LOGIC -->
   <script>
+    // AUTOMATIC HOST SELECTION
+    const isLocalDev = window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+    const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
+    const WS_BASE = isLocalDev ? `ws://${window.location.host}` : "wss://virgo-chat.onrender.com";
+
     const SVG_ICONS = {
       singleCheck: `<span class="status-check"><svg viewBox="0 0 16 11"><path d="M1 5.5L5.5 10L15 1"/></svg></span>`,
       doubleCheck: `<span class="status-check blue"><svg viewBox="0 0 22 11"><path d="M1 5.5L5.5 10L15 1"/><path d="M7 5.5L11.5 10L21 1"/></svg></span>`
@@ -1191,7 +1196,7 @@
     // GOOGLE AUTH
     async function handleGoogleLoginResponse(response) {
       try {
-        const res = await fetch("/auth/google", {
+        const res = await fetch(`${BACKEND_BASE}/auth/google`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ credential: response.credential })
@@ -1322,7 +1327,7 @@
 
     async function loadMyProfile() {
       try {
-        const res = await fetch(`/api/profile?userId=${encodeURIComponent(myId)}`);
+        const res = await fetch(`${BACKEND_BASE}/api/profile?userId=${encodeURIComponent(myId)}`);
         const p = await res.json();
         document.getElementById("inp-profile-name").value = p.displayName || "";
         document.getElementById("inp-profile-about").value = p.about || "";
@@ -1337,7 +1342,7 @@
     async function fetchUserProfile(userId) {
       if (profileCache[userId]) return profileCache[userId];
       try {
-        const res = await fetch(`/api/profile?userId=${encodeURIComponent(userId)}`);
+        const res = await fetch(`${BACKEND_BASE}/api/profile?userId=${encodeURIComponent(userId)}`);
         const p = await res.json();
         profileCache[userId] = p;
         return p;
@@ -1352,7 +1357,7 @@
       const avatar = document.getElementById("drawer-avatar-img").src;
 
       try {
-        const res = await fetch("/api/profile", {
+        const res = await fetch(`${BACKEND_BASE}/api/profile`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1376,11 +1381,12 @@
       if (!file) return;
       const formData = new FormData();
       formData.append("file", file, "avatar.jpg");
-      const res = await fetch("/upload", { method: "POST", body: formData });
+      const res = await fetch(`${BACKEND_BASE}/upload`, { method: "POST", body: formData });
       const data = await res.json();
       if (data.url) {
-        document.getElementById("drawer-avatar-img").src = data.url;
-        document.getElementById("rail-my-avatar").src = data.url;
+        const fullUrl = data.url.startsWith("/") ? BACKEND_BASE + data.url : data.url;
+        document.getElementById("drawer-avatar-img").src = fullUrl;
+        document.getElementById("rail-my-avatar").src = fullUrl;
       }
     }
 
@@ -1748,8 +1754,7 @@
     function connectWebSocket() {
       if (!myId || (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING))) return;
 
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProtocol}//${window.location.host}/ws?userId=${encodeURIComponent(myId)}`;
+      const wsUrl = `${WS_BASE}/ws?userId=${encodeURIComponent(myId)}`;
       ws = new WebSocket(wsUrl);
 
       ws.onmessage = async (event) => {
@@ -1850,6 +1855,9 @@
     async function processInboundMediaMessage(env) {
       const senderId = env.from.toLowerCase().trim();
       let mediaUrl = env.payload.url;
+      if (mediaUrl && mediaUrl.startsWith("/")) {
+        mediaUrl = BACKEND_BASE + mediaUrl;
+      }
 
       playMessageChime();
 
@@ -1960,18 +1968,19 @@
       const formData = new FormData();
       formData.append("file", file, file.name);
 
-      const res = await fetch("/upload", { method: "POST", body: formData });
+      const res = await fetch(`${BACKEND_BASE}/upload`, { method: "POST", body: formData });
       const data = await res.json();
 
       if (data.url) {
+        let fullUrl = data.url.startsWith("/") ? BACKEND_BASE + data.url : data.url;
         const msgId = "media-" + Date.now();
         const mediaType = file.type.startsWith("audio/") ? "audio" : "image";
-        displayMessage(data.url, "sent", msgId, mediaType, Date.now());
+        displayMessage(fullUrl, "sent", msgId, mediaType, Date.now());
 
         saveMessageToLocal({
           id: msgId,
           chatWith: activeChatId,
-          content: data.url,
+          content: fullUrl,
           direction: "sent",
           mediaType: mediaType,
           timestamp: Date.now()
@@ -1982,7 +1991,7 @@
           from: myId,
           to: activeChatId,
           type: "media",
-          payload: { url: data.url, mediaType: mediaType }
+          payload: { url: fullUrl, mediaType: mediaType }
         }));
       }
       event.target.value = "";
@@ -2008,13 +2017,14 @@
           const formData = new FormData();
           formData.append("file", audioBlob, chosenMime === "audio/mp4" ? "voice.mp4" : "voice.webm");
 
-          const res = await fetch("/upload", { method: "POST", body: formData });
+          const res = await fetch(`${BACKEND_BASE}/upload`, { method: "POST", body: formData });
           const data = await res.json();
           if (data.url) {
+            let fullUrl = data.url.startsWith("/") ? BACKEND_BASE + data.url : data.url;
             const msgId = "media-" + Date.now();
-            displayMessage(data.url, "sent", msgId, "audio", Date.now());
-            saveMessageToLocal({ id: msgId, chatWith: activeChatId, content: data.url, direction: "sent", mediaType: "audio", timestamp: Date.now() });
-            ws.send(JSON.stringify({ id: msgId, from: myId, to: activeChatId, type: "media", payload: { url: data.url, mediaType: "audio" } }));
+            displayMessage(fullUrl, "sent", msgId, "audio", Date.now());
+            saveMessageToLocal({ id: msgId, chatWith: activeChatId, content: fullUrl, direction: "sent", mediaType: "audio", timestamp: Date.now() });
+            ws.send(JSON.stringify({ id: msgId, from: myId, to: activeChatId, type: "media", payload: { url: fullUrl, mediaType: "audio" } }));
           }
         };
 
@@ -2097,7 +2107,7 @@
         if (!sub) {
           sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
         }
-        await fetch("/api/push/subscribe", {
+        await fetch(`${BACKEND_BASE}/api/push/subscribe`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId: myId, subscription: sub })
