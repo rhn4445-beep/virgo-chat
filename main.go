@@ -627,7 +627,22 @@ func main() {
 		uploadsHandler.ServeHTTP(w, r)
 	})
 
-	http.Handle("/", http.FileServer(http.Dir(".")))
+	fileServer := http.FileServer(http.Dir("."))
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if r.URL.Path == "/" || r.URL.Path == "/index.html" || r.URL.Path == "/sw.js" {
+			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+			w.Header().Set("Pragma", "no-cache")
+			w.Header().Set("Expires", "0")
+			if r.URL.Path == "/sw.js" {
+				http.ServeFile(w, r, "sw.js")
+				return
+			}
+			http.ServeFile(w, r, "index.html")
+			return
+		}
+		fileServer.ServeHTTP(w, r)
+	})
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		userId := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("userId")))
