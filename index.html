@@ -126,6 +126,10 @@
     .btn-save-profile { width: 100%; background-color: var(--wa-teal); color: white; font-size: 15px; font-weight: 600; padding: 12px; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px; }
     .btn-logout { width: 100%; background-color: transparent; color: #f15c5c; font-size: 14px; font-weight: 600; padding: 10px; border: 1px solid #f15c5c; border-radius: 8px; cursor: pointer; }
 
+    .emoji-item { font-size: 24px; cursor: pointer; padding: 4px 8px; border-radius: 8px; user-select: none; display: inline-block; }
+    .emoji-item:hover { background-color: #2a3942; }
+    #emoji-strip.open { display: flex !important; }
+
     @media (max-width: 768px) {
       #sidebar { width: 100%; border-right: none; }
       #chat-area { display: none; width: 100%; }
@@ -229,12 +233,41 @@
 
     <div id="messages"></div>
 
+    <div id="emoji-strip" style="display: none; background: #202c33; padding: 8px 12px; border-top: 1px solid #2a3942; overflow-x: auto; white-space: nowrap; gap: 8px;">
+      <span class="emoji-item" onclick="insertEmoji('😀')">😀</span>
+      <span class="emoji-item" onclick="insertEmoji('😂')">😂</span>
+      <span class="emoji-item" onclick="insertEmoji('🤣')">🤣</span>
+      <span class="emoji-item" onclick="insertEmoji('😍')">😍</span>
+      <span class="emoji-item" onclick="insertEmoji('🥰')">🥰</span>
+      <span class="emoji-item" onclick="insertEmoji('😎')">😎</span>
+      <span class="emoji-item" onclick="insertEmoji('👍')">👍</span>
+      <span class="emoji-item" onclick="insertEmoji('🙏')">🙏</span>
+      <span class="emoji-item" onclick="insertEmoji('❤️')">❤️</span>
+      <span class="emoji-item" onclick="insertEmoji('🔥')">🔥</span>
+      <span class="emoji-item" onclick="insertEmoji('🎉')">🎉</span>
+      <span class="emoji-item" onclick="insertEmoji('👏')">👏</span>
+      <span class="emoji-item" onclick="insertEmoji('🥳')">🥳</span>
+      <span class="emoji-item" onclick="insertEmoji('🚀')">🚀</span>
+      <span class="emoji-item" onclick="insertEmoji('✨')">✨</span>
+      <span class="emoji-item" onclick="insertEmoji('💯')">💯</span>
+      <span class="emoji-item" onclick="insertEmoji('🤝')">🤝</span>
+    </div>
+
     <div id="input-bar" style="display: none;">
       <div class="input-pill">
-        <button class="wa-icon-btn" title="Send Photo/Audio" onclick="document.getElementById('file-picker').click()">
+        <button class="wa-icon-btn" title="Emoji" onclick="toggleEmojiStrip()">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+        </button>
+
+        <button class="wa-icon-btn" title="Attach Document/Photo" onclick="document.getElementById('file-picker').click()">
           <svg viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5V6H9v9.5a3 3 0 0 0 6 0V5a4 4 0 0 0-8 0v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
         </button>
         <input type="file" id="file-picker" style="display: none;" accept="image/*,audio/*" onchange="handleFileUpload(event)">
+
+        <button class="wa-icon-btn" title="Take Photo" onclick="document.getElementById('camera-picker').click()">
+          <svg viewBox="0 0 24 24"><path d="M12 12c1.65 0 3-1.35 3-3s-1.35-3-3-3-3 1.35-3 3 1.35 3 3 3zm0 2c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm6.5-6H17l-1.83-2H8.83L7 8H4.5C3.12 8 2 9.12 2 10.5v9C2 20.88 3.12 22 4.5 22h14c1.38 0 2.5-1.12 2.5-2.5v-9c0-1.38-1.12-2.5-2.5-2.5z"/></svg>
+        </button>
+        <input type="file" id="camera-picker" style="display: none;" accept="image/*" capture="environment" onchange="handleFileUpload(event)">
         
         <input type="text" id="msg-input" placeholder="Message" onkeydown="if(event.key === 'Enter') sendMsg()">
       </div>
@@ -308,17 +341,31 @@
       location.reload();
     }
 
-    function promptQuickLogin() {
-      const email = prompt("Enter your email or username to sign in:", "rhn4445@gmail.com");
-      if (email && email.trim()) {
-        const clean = email.trim().toLowerCase();
-        localStorage.setItem("virgo_auth_user", clean);
-        initAuthenticatedSession(clean);
+    function showWelcomeScreen() {
+      const welcome = document.getElementById("welcome-modal");
+      if (welcome) welcome.style.display = "flex";
+    }
+
+    function handleWelcomeLogin() {
+      const input = document.getElementById("welcome-input");
+      if (!input || !input.value.trim()) {
+        alert("Please enter a valid phone number, email, or username!");
+        if (input) input.focus();
+        return;
       }
+      const clean = input.value.trim().toLowerCase();
+      localStorage.setItem("virgo_auth_user", clean);
+      initAuthenticatedSession(clean);
+    }
+
+    function promptQuickLogin() {
+      showWelcomeScreen();
     }
 
     async function initAuthenticatedSession(user) {
       myId = user.toLowerCase().trim();
+      const welcome = document.getElementById("welcome-modal");
+      if (welcome) welcome.style.display = "none";
       document.getElementById("auth-signin-btn").style.display = "none";
       const qBtn = document.getElementById("quick-login-btn");
       if (qBtn) qBtn.style.display = "none";
@@ -334,7 +381,11 @@
 
     window.addEventListener("DOMContentLoaded", async () => {
       const savedUser = localStorage.getItem("virgo_auth_user");
-      if (savedUser) await initAuthenticatedSession(savedUser);
+      if (savedUser) {
+        await initAuthenticatedSession(savedUser);
+      } else {
+        showWelcomeScreen();
+      }
     });
 
     // --- PROFILE SETTINGS ---
@@ -612,11 +663,47 @@
     }
 
     function promptNewChat() {
-      const target = prompt("Enter email of the contact or group-name:");
-      if (!target) return;
-      const clean = target.toLowerCase().trim();
-      if (clean === myId) return alert("You cannot start a chat with your own account!");
+      openNewChatModal();
+    }
+
+    function openNewChatModal() {
+      const m = document.getElementById("new-chat-modal");
+      if (m) {
+        m.style.display = "flex";
+        setTimeout(() => {
+          const input = document.getElementById("new-chat-input");
+          if (input) { input.value = ""; input.focus(); }
+        }, 100);
+      }
+    }
+
+    function closeNewChatModal() {
+      const m = document.getElementById("new-chat-modal");
+      if (m) m.style.display = "none";
+    }
+
+    function confirmNewChat() {
+      const input = document.getElementById("new-chat-input");
+      if (!input || !input.value.trim()) return;
+      const clean = input.value.trim().toLowerCase();
+      if (clean === myId) return alert("You cannot start a chat with yourself!");
+      closeNewChatModal();
       selectContact(clean);
+    }
+
+    function toggleEmojiStrip() {
+      const s = document.getElementById("emoji-strip");
+      if (s) s.classList.toggle("open");
+    }
+
+    function insertEmoji(char) {
+      const input = document.getElementById("msg-input");
+      if (input) {
+        input.value += char;
+        input.focus();
+        document.getElementById("send-btn").style.display = "flex";
+        document.getElementById("mic-btn").style.display = "none";
+      }
     }
 
     async function selectContact(target) {
@@ -1044,5 +1131,42 @@
       navigator.serviceWorker.register('/sw.js?v=' + Date.now()).then(r => r.update());
     }
   </script>
+
+  <!-- WHATSAPP WELCOME / ONBOARDING SCREEN -->
+  <div id="welcome-modal" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:#111b21;z-index:999999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;">
+    <div style="width:84px;height:84px;border-radius:50%;background:#00a884;display:flex;align-items:center;justify-content:center;margin-bottom:24px;box-shadow:0 8px 30px rgba(0,168,132,0.35);">
+      <svg style="width:48px;height:48px;fill:white;" viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-5.46-4.45-9.92-9.91-9.92zM12.04 20.14c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31c-.82-1.31-1.26-2.83-1.26-4.38 0-4.54 3.7-8.24 8.24-8.24 4.54 0 8.24 3.7 8.24 8.24 0 4.53-3.7 8.24-8.24 8.24zm4.52-6.17c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.97-.14.17-.29.19-.54.07-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.39-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.17-.25.25-.42.08-.17.04-.31-.02-.43s-.56-1.34-.76-1.84c-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.12.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.44.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.07-.12-.23-.19-.48-.31z"/></svg>
+    </div>
+    <h2 style="color:#e9edef;font-size:26px;font-weight:600;margin-bottom:8px;letter-spacing:0.3px;">Welcome to Virgo</h2>
+    <p style="color:#8696a0;font-size:14px;text-align:center;max-width:300px;line-height:1.5;margin-bottom:32px;">Simple, fast, private messaging with WhatsApp interface & end-to-end security.</p>
+    
+    <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <label style="color:#00a884;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Your Name, Phone or Email</label>
+        <input id="welcome-input" type="text" placeholder="e.g. Rohan or +91 9876543210" style="width:100%;padding:14px 16px;background:#202c33;border:1.5px solid #2a3942;border-radius:10px;color:#e9edef;font-size:15px;outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')handleWelcomeLogin()">
+      </div>
+      <button onclick="handleWelcomeLogin()" style="width:100%;padding:14px;background:#00a884;color:#111b21;border:none;border-radius:24px;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px;transition:background 0.2s;">AGREE AND CONTINUE</button>
+    </div>
+  </div>
+
+  <!-- WHATSAPP NEW CHAT DIALOG MODAL -->
+  <div id="new-chat-modal" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.7);z-index:99998;display:none;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;">
+    <div style="background:#202c33;border-radius:16px;width:100%;max-width:360px;padding:24px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px;box-shadow:0 12px 36px rgba(0,0,0,0.5);">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:#00a884;display:flex;align-items:center;justify-content:center;">
+          <svg style="width:20px;height:20px;fill:white;" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        </div>
+        <div>
+          <h3 style="color:#e9edef;font-size:18px;font-weight:600;">Start New Chat</h3>
+          <p style="color:#8696a0;font-size:12px;">Message any user on Virgo</p>
+        </div>
+      </div>
+      <input id="new-chat-input" type="text" placeholder="Enter contact name, phone, or email..." style="width:100%;padding:12px 14px;background:#111b21;border:1px solid #2a3942;border-radius:8px;color:#e9edef;font-size:14px;outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')confirmNewChat()">
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button onclick="closeNewChatModal()" style="background:transparent;border:none;color:#8696a0;padding:10px 16px;font-weight:600;font-size:14px;cursor:pointer;">CANCEL</button>
+        <button onclick="confirmNewChat()" style="background:#00a884;border:none;border-radius:20px;color:#111b21;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;">CHAT</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
