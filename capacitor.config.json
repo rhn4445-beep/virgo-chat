@@ -3,7 +3,7 @@
   "appName": "Virgo",
   "webDir": "www",
   "server": {
-    "url": "https://squander-viral-stick.ngrok-free.dev",
+    "url": "https://virgo-chat.onrender.com",
     "cleartext": true
   }
 }
