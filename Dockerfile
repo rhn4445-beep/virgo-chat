@@ -1,5 +1,5 @@
 # Build stage: standard Go build environment with git and certificates
-FROM golang:1.26 AS builder
+FROM golang:latest AS builder
 
 WORKDIR /app
 
