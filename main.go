@@ -40,7 +40,7 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = "v2.2.0"
+var serverBuildTime = "v2.3.0"
 
 type Hub struct {
 	clients    map[string]*Client
@@ -456,7 +456,13 @@ func (h *Hub) storePendingMessage(msgID, from, to string, raw []byte) {
 }
 
 func (h *Hub) deliverPendingMessages(c *Client) {
-	time.Sleep(500 * time.Millisecond)
+	if c == nil || c.ID == "" {
+		return
+	}
+	time.Sleep(300 * time.Millisecond)
+
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
 
 	query := `SELECT id, payload FROM pending_messages WHERE recipient_id = ? ORDER BY timestamp ASC;`
 	rows, err := h.db.Query(query, c.ID)
@@ -470,26 +476,34 @@ func (h *Hub) deliverPendingMessages(c *Client) {
 	for rows.Next() {
 		var id, payload string
 		if err := rows.Scan(&id, &payload); err == nil {
-			c.Send <- []byte(payload)
-			deliveredIDs = append(deliveredIDs, id)
+			select {
+			case c.Send <- []byte(payload):
+				deliveredIDs = append(deliveredIDs, id)
+			default:
+			}
+
 			var env Envelope
 			if err := json.Unmarshal([]byte(payload), &env); err == nil && env.From != "" {
 				if (env.Type == "chat" || env.Type == "media") && env.ID != "" {
-					h.mutex.Lock()
-					if senderClient, ok := h.clients[strings.ToLower(env.From)]; ok {
-						delivAck, _ := json.Marshal(Envelope{
-							ID:        env.ID,
-							From:      c.ID,
-							To:        env.From,
-							Type:      "delivery_receipt",
-							Timestamp: time.Now().UnixMilli(),
-						})
+					senderTarget := strings.ToLower(env.From)
+					delivAck, _ := json.Marshal(Envelope{
+						ID:        env.ID,
+						From:      c.ID,
+						To:        env.From,
+						Type:      "delivery_receipt",
+						Timestamp: time.Now().UnixMilli(),
+					})
+					if senderClient, ok := h.clients[senderTarget]; ok {
 						select {
 						case senderClient.Send <- delivAck:
 						default:
 						}
+					} else {
+						// Store delivery receipt for sender when sender connects later
+						delivMsgID := fmt.Sprintf("ack-%s", env.ID)
+						h.db.Exec(`INSERT OR REPLACE INTO pending_messages (id, sender_id, recipient_id, payload, timestamp) VALUES (?, ?, ?, ?, ?);`,
+							delivMsgID, c.ID, senderTarget, string(delivAck), time.Now().UnixMilli())
 					}
-					h.mutex.Unlock()
 				}
 			}
 		}
@@ -576,6 +590,13 @@ func (c *Client) readPump(hub *Hub) {
 					case peer.Send <- msg:
 					default:
 					}
+				}
+			} else {
+				// Target is currently offline! Store receipt so target updates status when they connect
+				if msg, err := json.Marshal(env); err == nil {
+					rcptID := fmt.Sprintf("rcpt-%s-%d", env.ID, time.Now().UnixNano())
+					hub.db.Exec(`INSERT OR REPLACE INTO pending_messages (id, sender_id, recipient_id, payload, timestamp) VALUES (?, ?, ?, ?, ?);`,
+						rcptID, c.ID, target, string(msg), time.Now().UnixMilli())
 				}
 			}
 			hub.mutex.Unlock()

@@ -393,8 +393,8 @@
 
     /* FLOATING ACTION BUTTON */
     #fab-new-chat {
-      position: absolute;
-      bottom: 24px;
+      position: fixed;
+      bottom: calc(75px + env(safe-area-inset-bottom, 0px));
       right: 20px;
       width: 56px;
       height: 56px;
@@ -406,8 +406,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 8px 25px rgba(245, 197, 66, 0.45), 0 2px 8px rgba(0,0,0,0.6);
-      z-index: 35;
+      box-shadow: 0 8px 25px rgba(245, 197, 66, 0.5), 0 2px 8px rgba(0,0,0,0.6);
+      z-index: 99;
       transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
     }
     #fab-new-chat:hover { transform: scale(1.1); box-shadow: 0 10px 30px rgba(245, 197, 66, 0.6); }
@@ -817,9 +817,9 @@
       body.in-chat #mobile-bottom-nav { display: none; }
       #fab-new-chat {
         position: fixed;
-        bottom: calc(65px + 16px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(75px + env(safe-area-inset-bottom, 0px));
         right: 20px;
-        z-index: 45;
+        z-index: 99;
       }
       body.in-chat #fab-new-chat {
         display: none !important;
@@ -934,17 +934,17 @@
 
     <div class="sidebar-header">
       <div class="sidebar-title-wrap">
-        <img class="mobile-logo-img" src="icon.png" alt="Virgo" onclick="location.reload()">
+        <img class="mobile-logo-img" src="icon.png" alt="Virgo" onclick="applyInstantUpdate()" title="Virgo">
         <span class="sidebar-title">Virgo <span class="sidebar-badge">E2EE</span></span>
       </div>
       <div class="sidebar-header-actions">
-        <button class="action-icon-btn" onclick="openCameraModal()" title="Camera">
+        <button class="action-icon-btn" onclick="openCameraModal()" title="Take Photo / Camera">
           <svg viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
         </button>
         <button class="action-icon-btn" onclick="openNewChatModal()" title="New Chat">
           <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
         </button>
-        <button class="action-icon-btn" onclick="location.reload()" title="Refresh">
+        <button class="action-icon-btn" onclick="applyInstantUpdate()" title="Sync & Check for Updates">
           <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
         </button>
         <button id="quick-signin-btn" onclick="showWelcomeScreen()" style="background:linear-gradient(135deg, var(--virgo-gold-bright), var(--virgo-gold));color:#06090e;border:none;border-radius:16px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer;">Sign In</button>
@@ -1289,7 +1289,7 @@
     const isLocalDev = window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = "v2.2.0";
+    let activeClientVersion = "v2.3.0";
     let updateBannerDismissed = false;
 
     function handleIncomingAppVersion(newVersion) {
@@ -1315,11 +1315,16 @@
     function applyInstantUpdate() {
       const banner = document.getElementById("ota-update-banner");
       if (banner) {
-        banner.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;"><span style="font-size:20px;">⚡</span><strong style="color:var(--virgo-gold-bright);font-size:13.5px;">Applying update...</strong></div>`;
+        banner.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;"><span style="font-size:20px;">⚡</span><strong style="color:var(--virgo-gold-bright);font-size:13.5px;">Updating Virgo...</strong></div>`;
       }
+      try {
+        if ('caches' in window) {
+          caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(() => {});
+        }
+      } catch(e) {}
       setTimeout(() => {
         window.location.replace(window.location.origin + window.location.pathname + "?v=" + Date.now());
-      }, 400);
+      }, 300);
     }
 
     async function pollForAppUpdates() {
@@ -1333,7 +1338,8 @@
         }
       } catch (e) {}
     }
-    setInterval(pollForAppUpdates, 60000);
+    setTimeout(pollForAppUpdates, 1500);
+    setInterval(pollForAppUpdates, 30000);
 
     const WS_BASE = isLocalDev ? `ws://${window.location.host}` : "wss://virgo-chat.onrender.com";
 
@@ -1351,15 +1357,16 @@
       return SVG_ICONS.sent;
     }
 
-    function updateMessageStatusInDomAndDb(msgId, newStatus) {
+    async function updateMessageStatusInDomAndDb(msgId, newStatus) {
       if (!msgId) return;
       const el = document.getElementById(`tick-${msgId}`);
       if (el) {
         el.innerHTML = getTickHtml(newStatus);
       }
-      if (!db) return;
       try {
-        const tx = db.transaction("messages", "readwrite");
+        const database = await getDB();
+        if (!database) return;
+        const tx = database.transaction("messages", "readwrite");
         const store = tx.objectStore("messages");
         const req = store.get(msgId);
         req.onsuccess = () => {
@@ -1375,7 +1382,7 @@
       } catch (e) {}
     }
 
-    function markAllSentMessagesReadForPeer(peerId) {
+    async function markAllSentMessagesReadForPeer(peerId) {
       if (!peerId) return;
       const target = peerId.toLowerCase().trim();
       if (activeChatId === target) {
@@ -1383,9 +1390,10 @@
           span.innerHTML = SVG_ICONS.read;
         });
       }
-      if (!db) return;
       try {
-        const tx = db.transaction("messages", "readwrite");
+        const database = await getDB();
+        if (!database) return;
+        const tx = database.transaction("messages", "readwrite");
         const store = tx.objectStore("messages");
         const index = store.index("chatWith");
         const req = index.getAll(target);
@@ -1401,9 +1409,11 @@
     }
 
     async function flushPendingOutbox() {
-      if (!db || !ws || ws.readyState !== WebSocket.OPEN) return;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
       try {
-        const tx = db.transaction("messages", "readonly");
+        const database = await getDB();
+        if (!database) return;
+        const tx = database.transaction("messages", "readonly");
         const store = tx.objectStore("messages");
         const req = store.getAll();
         req.onsuccess = async () => {
@@ -1420,6 +1430,7 @@
                   payload: { url: m.content, mediaType: m.mediaType }
                 }));
               } else {
+                const pubKey = await exportPublicKey();
                 const encrypted = await encryptText(m.chatWith, m.content);
                 if (encrypted) {
                   ws.send(JSON.stringify({
@@ -1427,7 +1438,7 @@
                     from: myId,
                     to: m.chatWith,
                     type: "chat",
-                    payload: { ciphertext: encrypted.ciphertext, iv: encrypted.iv }
+                    payload: { ciphertext: encrypted.ciphertext, iv: encrypted.iv, senderJwk: pubKey }
                   }));
                 } else {
                   ws.send(JSON.stringify({
@@ -1435,7 +1446,7 @@
                     from: myId,
                     to: m.chatWith,
                     type: "chat",
-                    payload: { text: m.content }
+                    payload: { text: m.content, senderJwk: pubKey }
                   }));
                 }
               }
@@ -1545,26 +1556,22 @@
       const idEl = document.getElementById("lbl-profile-id");
       if (idEl) idEl.innerText = myId;
 
-      // 1. Immediately establish real-time WebSocket connection
-      connectWebSocket();
+      // 1. Ensure cryptography and local database are ready FIRST
+      try {
+        await ensureCryptoReady();
+      } catch(e) {
+        console.warn("ensureCryptoReady warning:", e);
+      }
 
-      // 2. Initialize local database safely
       try {
         await getDB();
         refreshSidebarContacts();
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "fetch_offline", from: myId }));
-        }
       } catch(e) {
         console.warn("initDB warning:", e);
       }
 
-      // 3. Initialize cryptography safely without blocking messaging
-      try {
-        await initCrypto();
-      } catch(e) {
-        console.warn("initCrypto warning:", e);
-      }
+      // 2. Establish real-time WebSocket connection
+      connectWebSocket();
 
       try {
         await loadMyProfile();
@@ -1768,7 +1775,16 @@
       } catch (e) { return null; }
     }
 
+    let cryptoReadyPromise = null;
+    function ensureCryptoReady() {
+      if (!cryptoReadyPromise) {
+        cryptoReadyPromise = initCrypto();
+      }
+      return cryptoReadyPromise;
+    }
+
     async function exportPublicKey() {
+      await ensureCryptoReady();
       if (!myKeyPair || !myKeyPair.publicKey) return null;
       try {
         return await window.crypto.subtle.exportKey("jwk", myKeyPair.publicKey);
@@ -1816,6 +1832,7 @@
     }
 
     async function deriveSharedKey(peerJwk, peerId) {
+      await ensureCryptoReady();
       if (!peerId || !peerJwk || !myKeyPair) return;
       try {
         const target = peerId.toLowerCase().trim();
@@ -1920,9 +1937,15 @@
           setTimeout(() => saveMessageToLocal(msgObj), 400);
           return;
         }
-        const tx = database.transaction("messages", "readwrite");
-        tx.objectStore("messages").put(msgObj);
-        tx.oncomplete = () => refreshSidebarContacts();
+        return new Promise((resolve) => {
+          const tx = database.transaction("messages", "readwrite");
+          tx.objectStore("messages").put(msgObj);
+          tx.oncomplete = () => {
+            refreshSidebarContacts();
+            resolve(true);
+          };
+          tx.onerror = () => resolve(false);
+        });
       } catch (e) {
         console.warn("saveMessageToLocal error:", e);
       }
@@ -2347,6 +2370,9 @@
     }
 
     async function processInboundChatMessage(env) {
+      await ensureCryptoReady();
+      await getDB();
+
       const senderId = env.from.toLowerCase().trim();
       let text = (env.payload && env.payload.text) ? env.payload.text : "";
 
@@ -2377,7 +2403,7 @@
 
       playMessageChime();
 
-      saveMessageToLocal({
+      await saveMessageToLocal({
         id: env.id,
         chatWith: senderId,
         from: senderId,
@@ -2422,6 +2448,8 @@
     }
 
     async function processInboundMediaMessage(env) {
+      await getDB();
+
       const senderId = env.from.toLowerCase().trim();
       let mediaUrl = env.payload.url;
       if (mediaUrl && mediaUrl.startsWith("/")) {
@@ -2430,7 +2458,7 @@
 
       playMessageChime();
 
-      saveMessageToLocal({
+      await saveMessageToLocal({
         id: env.id,
         chatWith: senderId,
         from: senderId,
