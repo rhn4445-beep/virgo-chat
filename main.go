@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	vapidPublicKey  = "BCsZp31m91k34i6wE1Tj_0j1_M7C4Zl9Q2g4j6m9n8b7v6c5x4z3a2s1d0f9g8h7j6k5l4z3x2c1v0b9n8m7"
-	vapidPrivateKey = "x1y2z3a4b5c6d7e8f9g0h1i2j3k4l5m6n7o8p9q0r1s="
+	vapidPublicKey  = "BArzAnrnhXIdRwPq7Ds0gEX4-AQMT9-T9LSjgzS0lq0c4zLU8bMwtJXE4_OqZz_nhZw5u8DAhz64ynIHfyrklIA"
+	vapidPrivateKey = "o-dWfKd6ta3PwliutqHn0RaPNFOGClxIrnOyiDGlvFw"
 	vapidSubscriber = "mailto:admin@virgo.app"
 )
 
@@ -411,8 +411,10 @@ func (h *Hub) storePendingMessage(msgID, from, to string, raw []byte) {
 	if msgID == "" {
 		msgID = fmt.Sprintf("pending-%d", time.Now().UnixNano())
 	}
+	cleanFrom := strings.ToLower(strings.TrimSpace(from))
+	cleanTo := strings.ToLower(strings.TrimSpace(to))
 	query := `INSERT OR REPLACE INTO pending_messages (id, sender_id, recipient_id, payload, timestamp) VALUES (?, ?, ?, ?, ?);`
-	_, err := h.db.Exec(query, msgID, from, to, string(raw), time.Now().UnixMilli())
+	_, err := h.db.Exec(query, msgID, cleanFrom, cleanTo, string(raw), time.Now().UnixMilli())
 	if err != nil {
 		log.Printf("Error storing pending message: %v", err)
 	}
@@ -426,11 +428,13 @@ func (h *Hub) storePendingMessage(msgID, from, to string, raw []byte) {
 		var subJSON string
 		err := h.db.QueryRow(`SELECT subscription FROM push_subscriptions WHERE user_id = ?;`, targetUser).Scan(&subJSON)
 		if err != nil {
+			log.Printf("No push subscription found for offline user %s", targetUser)
 			return
 		}
 
 		s := &webpush.Subscription{}
 		if err := json.Unmarshal([]byte(subJSON), s); err != nil {
+			log.Printf("Invalid push subscription JSON for %s: %v", targetUser, err)
 			return
 		}
 
@@ -439,15 +443,16 @@ func (h *Hub) storePendingMessage(msgID, from, to string, raw []byte) {
 			Subscriber:      vapidSubscriber,
 			VAPIDPublicKey:  vapidPublicKey,
 			VAPIDPrivateKey: vapidPrivateKey,
-			TTL:             60,
+			TTL:             86400,
+			Urgency:         webpush.UrgencyHigh,
 		})
 		if pushErr != nil {
-			log.Printf("Push notification error: %v", pushErr)
+			log.Printf("Push notification error to %s: %v", targetUser, pushErr)
 		} else if res != nil {
+			log.Printf("Background push delivered to %s (code: %d)", targetUser, res.StatusCode)
 			res.Body.Close()
-			log.Printf("🚀 Background push dispatched to %s", targetUser)
 		}
-	}(to, from)
+	}(cleanTo, cleanFrom)
 }
 
 func (h *Hub) deliverPendingMessages(c *Client) {

@@ -922,6 +922,16 @@
 
   <!-- SIDEBAR PANEL -->
   <div id="sidebar">
+    
+    <!-- NOTIFICATION PERMISSION PROMPT -->
+    <div id="notif-perm-prompt" style="display:none;background:rgba(245,197,66,0.12);border:1px solid var(--virgo-gold);border-radius:12px;margin:10px 14px;padding:10px 14px;display:none;align-items:center;justify-content:space-between;gap:10px;">
+      <div style="font-size:12px;color:#fff;line-height:1.4;">
+        <strong style="color:var(--virgo-gold-bright);">Enable Notifications</strong>
+        <div style="color:var(--text-muted);font-size:11px;">Receive alerts when app is closed.</div>
+      </div>
+      <button onclick="requestNotificationPermissionFromUser()" style="background:linear-gradient(135deg,var(--virgo-gold-bright),var(--virgo-gold));border:none;border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:700;color:#06090e;cursor:pointer;flex-shrink:0;">Turn On</button>
+    </div>
+
     <div class="sidebar-header">
       <div class="sidebar-title-wrap">
         <img class="mobile-logo-img" src="icon.png" alt="Virgo" onclick="location.reload()">
@@ -2305,6 +2315,14 @@
         }
         unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
         refreshSidebarContacts();
+        if ("Notification" in window && Notification.permission === "granted") {
+          try {
+            new Notification("Virgo", {
+              body: `New message from ${senderId}`,
+              icon: "icon.png"
+            });
+          } catch(e) {}
+        }
       }
     }
 
@@ -2350,6 +2368,14 @@
         }
         unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
         refreshSidebarContacts();
+        if ("Notification" in window && Notification.permission === "granted") {
+          try {
+            new Notification("Virgo", {
+              body: `New message from ${senderId}`,
+              icon: "icon.png"
+            });
+          } catch(e) {}
+        }
       }
     }
 
@@ -2604,7 +2630,7 @@
     }
 
     // PUSH NOTIFICATIONS
-    const VAPID_PUBLIC_KEY = "BCsZp31m91k34i6wE1Tj_0j1_M7C4Zl9Q2g4j6m9n8b7v6c5x4z3a2s1d0f9g8h7j6k5l4z3x2c1v0b9n8m7";
+    const VAPID_PUBLIC_KEY = "BArzAnrnhXIdRwPq7Ds0gEX4-AQMT9-T9LSjgzS0lq0c4zLU8bMwtJXE4_OqZz_nhZw5u8DAhz64ynIHfyrklIA";
     function urlBase64ToUint8Array(base64String) {
       const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
       const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
@@ -2614,20 +2640,64 @@
       return outputArray;
     }
 
+    function showNotificationPermissionPrompt() {
+      const p = document.getElementById("notif-perm-prompt");
+      if (p && "Notification" in window && Notification.permission !== "granted") {
+        p.style.display = "flex";
+      }
+    }
+
+    function hideNotificationPermissionPrompt() {
+      const p = document.getElementById("notif-perm-prompt");
+      if (p) p.style.display = "none";
+    }
+
+    async function requestNotificationPermissionFromUser() {
+      if ("Notification" in window) {
+        try {
+          const perm = await Notification.requestPermission();
+          if (perm === "granted") {
+            hideNotificationPermissionPrompt();
+            await subscribeToPushNotifications();
+            alert("✅ Notifications active! You will receive alerts when messages arrive while the app is closed.");
+          }
+        } catch(e) {}
+      }
+    }
+
     async function subscribeToPushNotifications() {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      if (!('serviceWorker' in navigator)) return;
       try {
+        if ("Notification" in window && Notification.permission !== "granted") {
+          showNotificationPermissionPrompt();
+          const perm = await Notification.requestPermission();
+          if (perm !== "granted") return;
+        }
+        hideNotificationPermissionPrompt();
+
         const reg = await navigator.serviceWorker.ready;
+        if (!reg || !reg.pushManager) return;
+
         let sub = await reg.pushManager.getSubscription();
         if (!sub) {
-          sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+          });
         }
-        await fetch(`${BACKEND_BASE}/api/push/subscribe`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: myId, subscription: sub })
-        });
-      } catch (e) {}
+        if (sub && myId) {
+          const res = await fetch(`${BACKEND_BASE}/api/push/subscribe`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: myId, subscription: sub })
+          });
+          if (res.ok) {
+            console.log("📱 Background Push Registered for", myId);
+          }
+        }
+      } catch (e) {
+        console.warn("Push subscription note:", e);
+      }
     }
 
     function handleSearch(q) {
