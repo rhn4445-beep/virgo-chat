@@ -21,6 +21,8 @@ This guide outlines how to host your Virgo chat server in the cloud 24/7 for **$
 
 ## 2. Deploy Server 24/7 on Render.com (100% Free)
 
+**Live Deploy Hook**: `https://api.render.com/deploy/srv-dbqoik5bedkc73e9gb1g?key=lopFi3VIWQo`
+
 1. Sign up for a free account at [Render.com](https://render.com).
 2. Click **New +** -> **Web Service**.
 3. Select **Build and deploy from a Git repository** and connect your GitHub repo.
