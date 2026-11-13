@@ -1289,17 +1289,12 @@
     const isLocalDev = window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = sessionStorage.getItem("virgo_active_version") || "";
+    let activeClientVersion = "v2.2.0";
     let updateBannerDismissed = false;
 
     function handleIncomingAppVersion(newVersion) {
-      if (!newVersion) return;
-      if (!activeClientVersion) {
-        activeClientVersion = newVersion;
-        sessionStorage.setItem("virgo_active_version", newVersion);
-        return;
-      }
-      if (newVersion !== activeClientVersion && !updateBannerDismissed) {
+      if (!newVersion || updateBannerDismissed) return;
+      if (newVersion !== activeClientVersion) {
         showUpdateNotificationBanner(newVersion);
       }
     }
@@ -1308,14 +1303,6 @@
       const banner = document.getElementById("ota-update-banner");
       if (banner) {
         banner.style.display = "flex";
-      }
-      if ("Notification" in window && Notification.permission === "granted") {
-        try {
-          new Notification("Virgo Update Available", {
-            body: "A new version of Virgo is ready. Tap to update.",
-            icon: "icon.png"
-          });
-        } catch (e) {}
       }
     }
 
@@ -1326,11 +1313,13 @@
     }
 
     function applyInstantUpdate() {
-      sessionStorage.removeItem("virgo_active_version");
-      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({ type: "SKIP_WAITING" });
+      const banner = document.getElementById("ota-update-banner");
+      if (banner) {
+        banner.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;"><span style="font-size:20px;">⚡</span><strong style="color:var(--virgo-gold-bright);font-size:13.5px;">Applying update...</strong></div>`;
       }
-      window.location.reload(true);
+      setTimeout(() => {
+        window.location.replace(window.location.origin + window.location.pathname + "?v=" + Date.now());
+      }, 400);
     }
 
     async function pollForAppUpdates() {
@@ -1344,7 +1333,7 @@
         }
       } catch (e) {}
     }
-    setInterval(pollForAppUpdates, 25000);
+    setInterval(pollForAppUpdates, 60000);
 
     const WS_BASE = isLocalDev ? `ws://${window.location.host}` : "wss://virgo-chat.onrender.com";
 
@@ -1553,13 +1542,33 @@
       const gBtn = document.getElementById("auth-signin-btn");
       if (gBtn) gBtn.style.display = "none";
 
-      document.getElementById("lbl-profile-id").innerText = myId;
+      const idEl = document.getElementById("lbl-profile-id");
+      if (idEl) idEl.innerText = myId;
 
-      await initCrypto();
-      await initDB();
+      // 1. Immediately establish real-time WebSocket connection
       connectWebSocket();
-      await loadMyProfile();
-      subscribeToPushNotifications();
+
+      // 2. Initialize local database safely
+      try {
+        await initDB();
+      } catch(e) {
+        console.warn("initDB warning:", e);
+      }
+
+      // 3. Initialize cryptography safely without blocking messaging
+      try {
+        await initCrypto();
+      } catch(e) {
+        console.warn("initCrypto warning:", e);
+      }
+
+      try {
+        await loadMyProfile();
+      } catch(e) {}
+
+      try {
+        subscribeToPushNotifications();
+      } catch(e) {}
     }
 
     window.addEventListener("DOMContentLoaded", async () => {
@@ -1716,16 +1725,21 @@
 
     // CRYPTO
     function getKeyStoreDB() {
-      const safeId = myId.replace(/[^a-zA-Z0-9]/g, "_");
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open("VirgoKeyStore_" + safeId, 2);
-        req.onupgradeneeded = (e) => {
-          const d = e.target.result;
-          if (!d.objectStoreNames.contains("keys")) d.createObjectStore("keys", { keyPath: "id" });
-          if (!d.objectStoreNames.contains("peer_keys")) d.createObjectStore("peer_keys", { keyPath: "peerId" });
-        };
-        req.onsuccess = (e) => resolve(e.target.result);
-        req.onerror = reject;
+      return new Promise((resolve) => {
+        try {
+          const safeId = (myId || "guest").replace(/[^a-zA-Z0-9]/g, "_");
+          const req = indexedDB.open("VirgoKeyStore_" + safeId, 2);
+          req.onupgradeneeded = (e) => {
+            const d = e.target.result;
+            if (!d.objectStoreNames.contains("keys")) d.createObjectStore("keys", { keyPath: "id" });
+            if (!d.objectStoreNames.contains("peer_keys")) d.createObjectStore("peer_keys", { keyPath: "peerId" });
+          };
+          req.onsuccess = (e) => resolve(e.target.result);
+          req.onerror = () => resolve(null);
+          req.onblocked = () => resolve(null);
+        } catch(err) {
+          resolve(null);
+        }
       });
     }
 
@@ -1740,9 +1754,13 @@
     async function getPeerPublicKey(peerId) {
       try {
         const keyDb = await getKeyStoreDB();
+        if (!keyDb) return null;
         const tx = keyDb.transaction("peer_keys", "readonly");
         const req = tx.objectStore("peer_keys").get(peerId.toLowerCase().trim());
-        return await new Promise(res => { req.onsuccess = () => res(req.result ? req.result.jwk : null); });
+        return await new Promise(res => {
+          req.onsuccess = () => res(req.result ? req.result.jwk : null);
+          req.onerror = () => res(null);
+        });
       } catch (e) { return null; }
     }
 
@@ -1756,26 +1774,40 @@
     async function initCrypto() {
       try {
         const keyDb = await getKeyStoreDB();
-        const tx = keyDb.transaction("keys", "readonly");
-        const store = tx.objectStore("keys");
-        const getReq = store.get("ecdh_keypair");
-        const saved = await new Promise(res => { getReq.onsuccess = () => res(getReq.result); });
+        if (keyDb) {
+          const tx = keyDb.transaction("keys", "readonly");
+          const store = tx.objectStore("keys");
+          const getReq = store.get("ecdh_keypair");
+          const saved = await new Promise(res => {
+            getReq.onsuccess = () => res(getReq.result);
+            getReq.onerror = () => res(null);
+          });
 
-        if (saved && saved.publicKey && saved.privateKey) {
-          myKeyPair = {
-            publicKey: await window.crypto.subtle.importKey("jwk", saved.publicKey, { name: "ECDH", namedCurve: "P-256" }, true, []),
-            privateKey: await window.crypto.subtle.importKey("jwk", saved.privateKey, { name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"])
-          };
-          return;
+          if (saved && saved.publicKey && saved.privateKey) {
+            myKeyPair = {
+              publicKey: await window.crypto.subtle.importKey("jwk", saved.publicKey, { name: "ECDH", namedCurve: "P-256" }, true, []),
+              privateKey: await window.crypto.subtle.importKey("jwk", saved.privateKey, { name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"])
+            };
+            return;
+          }
         }
 
-        myKeyPair = await window.crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"]);
-        const pubJwk = await window.crypto.subtle.exportKey("jwk", myKeyPair.publicKey);
-        const privJwk = await window.crypto.subtle.exportKey("jwk", myKeyPair.privateKey);
-        const writeTx = keyDb.transaction("keys", "readwrite");
-        writeTx.objectStore("keys").put({ id: "ecdh_keypair", publicKey: pubJwk, privateKey: privJwk });
+        if (window.crypto && window.crypto.subtle) {
+          myKeyPair = await window.crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"]);
+          if (keyDb) {
+            const pubJwk = await window.crypto.subtle.exportKey("jwk", myKeyPair.publicKey);
+            const privJwk = await window.crypto.subtle.exportKey("jwk", myKeyPair.privateKey);
+            const writeTx = keyDb.transaction("keys", "readwrite");
+            writeTx.objectStore("keys").put({ id: "ecdh_keypair", publicKey: pubJwk, privateKey: privJwk });
+          }
+        }
       } catch (err) {
-        myKeyPair = await window.crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, false, ["deriveKey"]);
+        console.warn("initCrypto error:", err);
+        try {
+          if (window.crypto && window.crypto.subtle) {
+            myKeyPair = await window.crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, false, ["deriveKey"]);
+          }
+        } catch(e) {}
       }
     }
 
@@ -2159,96 +2191,112 @@
 
     // WEBSOCKET
     function connectWebSocket() {
-      if (!myId || (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING))) return;
+      if (!myId) return;
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
 
-      const wsUrl = `${WS_BASE}/ws?userId=${encodeURIComponent(myId)}`;
-      ws = new WebSocket(wsUrl);
+      try {
+        const wsUrl = `${WS_BASE}/ws?userId=${encodeURIComponent(myId)}`;
+        ws = new WebSocket(wsUrl);
 
-      ws.onopen = () => {
-        flushPendingOutbox();
-      };
+        ws.onopen = () => {
+          console.log("WebSocket connected as", myId);
+          flushPendingOutbox();
+        };
 
-      ws.onmessage = async (event) => {
-        try {
-          const env = JSON.parse(event.data);
+        ws.onmessage = async (event) => {
+          try {
+            const env = JSON.parse(event.data);
 
-          if (env.type === "app_version") {
-            if (env.payload && env.payload.version) {
-              handleIncomingAppVersion(env.payload.version);
+            if (env.type === "app_version") {
+              if (env.payload && env.payload.version) {
+                handleIncomingAppVersion(env.payload.version);
+              }
+              return;
             }
-            return;
-          }
 
-          if (env.type === "ack") {
-            updateMessageStatusInDomAndDb(env.id, "sent");
-            return;
-          }
-
-          if (env.type === "delivery_receipt") {
-            updateMessageStatusInDomAndDb(env.id, "delivered");
-            return;
-          }
-
-          if (env.type === "read_receipt") {
-            if (env.payload && env.payload.all) {
-              markAllSentMessagesReadForPeer(env.from);
-            } else if (env.id) {
-              updateMessageStatusInDomAndDb(env.id, "read");
+            if (env.type === "ack") {
+              updateMessageStatusInDomAndDb(env.id, "sent");
+              return;
             }
-            return;
-          }
 
-          if (env.type === "profile_update") {
-            profileCache[env.from] = env.payload;
-            refreshSidebarContacts();
-            if (env.from === activeChatId) {
-              document.getElementById("header-user-name").innerText = env.payload.displayName || env.from;
-              if (env.payload.avatarUrl) document.getElementById("header-contact-avatar").src = env.payload.avatarUrl;
+            if (env.type === "delivery_receipt") {
+              updateMessageStatusInDomAndDb(env.id, "delivered");
+              return;
             }
-            return;
-          }
 
-          if (env.type === "presence") {
-            let payload = typeof env.payload === "string" ? JSON.parse(env.payload) : env.payload;
-            if (payload && payload.status) {
-              userPresenceCache[env.from] = payload.status;
+            if (env.type === "read_receipt") {
+              if (env.payload && env.payload.all) {
+                markAllSentMessagesReadForPeer(env.from);
+              } else if (env.id) {
+                updateMessageStatusInDomAndDb(env.id, "read");
+              }
+              return;
+            }
+
+            if (env.type === "profile_update") {
+              profileCache[env.from] = env.payload;
               refreshSidebarContacts();
               if (env.from === activeChatId) {
-                const statusEl = document.getElementById("header-user-status");
-                statusEl.innerText = payload.status;
-                if (payload.status === "online") statusEl.classList.add("online");
-                else statusEl.classList.remove("online");
+                document.getElementById("header-user-name").innerText = env.payload.displayName || env.from;
+                if (env.payload.avatarUrl) document.getElementById("header-contact-avatar").src = env.payload.avatarUrl;
               }
+              return;
             }
-            return;
-          }
 
-          if (env.type === "key_exchange" || env.type === "key_exchange_ack") {
-            await deriveSharedKey(env.payload.jwk, env.from);
-            if (env.type === "key_exchange") {
-              const pubKey = await exportPublicKey();
-              if (pubKey) {
-                ws.send(JSON.stringify({
-                  id: "key-ack-" + Date.now(),
-                  from: myId,
-                  to: env.from,
-                  type: "key_exchange_ack",
-                  payload: { jwk: pubKey }
-                }));
+            if (env.type === "presence") {
+              let payload = typeof env.payload === "string" ? JSON.parse(env.payload) : env.payload;
+              if (payload && payload.status) {
+                userPresenceCache[env.from] = payload.status;
+                refreshSidebarContacts();
+                if (env.from === activeChatId) {
+                  const statusEl = document.getElementById("header-user-status");
+                  statusEl.innerText = payload.status;
+                  if (payload.status === "online") statusEl.classList.add("online");
+                  else statusEl.classList.remove("online");
+                }
               }
+              return;
             }
-            return;
-          }
 
-          if (env.type === "chat") {
-            await processInboundChatMessage(env);
-          } else if (env.type === "media") {
-            await processInboundMediaMessage(env);
-          }
-        } catch (e) {}
-      };
+            if (env.type === "key_exchange" || env.type === "key_exchange_ack") {
+              await deriveSharedKey(env.payload.jwk, env.from);
+              if (env.type === "key_exchange") {
+                const pubKey = await exportPublicKey();
+                if (pubKey) {
+                  ws.send(JSON.stringify({
+                    id: "key-ack-" + Date.now(),
+                    from: myId,
+                    to: env.from,
+                    type: "key_exchange_ack",
+                    payload: { jwk: pubKey }
+                  }));
+                }
+              }
+              return;
+            }
 
-      ws.onclose = () => setTimeout(connectWebSocket, 2000);
+            if (env.type === "chat") {
+              await processInboundChatMessage(env);
+            } else if (env.type === "media") {
+              await processInboundMediaMessage(env);
+            }
+          } catch (e) {}
+        };
+
+        ws.onerror = (err) => {
+          console.warn("WebSocket error:", err);
+        };
+
+        ws.onclose = () => {
+          console.log("WebSocket disconnected, reconnecting in 2s...");
+          ws = null;
+          setTimeout(connectWebSocket, 2000);
+        };
+      } catch(err) {
+        console.error("connectWebSocket error:", err);
+        ws = null;
+        setTimeout(connectWebSocket, 3000);
+      }
     }
 
     async function processInboundChatMessage(env) {
@@ -2401,35 +2449,50 @@
         status: initialStatus
       });
 
-      if (isOnline) {
-        const pubKey = await exportPublicKey();
-        const encrypted = await encryptText(activeChatId, text);
-        if (encrypted) {
-          ws.send(JSON.stringify({
-            id: msgId,
-            from: myId,
-            to: activeChatId,
-            type: "chat",
-            payload: {
-              ciphertext: encrypted.ciphertext,
-              iv: encrypted.iv,
-              senderJwk: pubKey
-            }
-          }));
-        } else {
-          ws.send(JSON.stringify({
-            id: msgId,
-            from: myId,
-            to: activeChatId,
-            type: "chat",
-            payload: { text: text, senderJwk: pubKey }
-          }));
-        }
-      }
-
       input.value = "";
       document.getElementById("btn-send").style.display = "none";
       document.getElementById("btn-mic").style.display = "flex";
+
+      if (isOnline) {
+        try {
+          const pubKey = await exportPublicKey();
+          const encrypted = await encryptText(activeChatId, text);
+          if (encrypted) {
+            ws.send(JSON.stringify({
+              id: msgId,
+              from: myId,
+              to: activeChatId,
+              type: "chat",
+              payload: {
+                ciphertext: encrypted.ciphertext,
+                iv: encrypted.iv,
+                senderJwk: pubKey
+              }
+            }));
+          } else {
+            ws.send(JSON.stringify({
+              id: msgId,
+              from: myId,
+              to: activeChatId,
+              type: "chat",
+              payload: { text: text, senderJwk: pubKey }
+            }));
+          }
+        } catch(err) {
+          console.warn("Encrypted send error, sending plaintext fallback:", err);
+          try {
+            ws.send(JSON.stringify({
+              id: msgId,
+              from: myId,
+              to: activeChatId,
+              type: "chat",
+              payload: { text: text }
+            }));
+          } catch(e) {}
+        }
+      } else {
+        connectWebSocket();
+      }
     }
 
     function displayMessage(content, direction, msgId, mediaType, timestamp, status) {

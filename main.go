@@ -40,7 +40,7 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = fmt.Sprintf("v%d", time.Now().Unix())
+var serverBuildTime = "v2.2.0"
 
 type Hub struct {
 	clients    map[string]*Client
