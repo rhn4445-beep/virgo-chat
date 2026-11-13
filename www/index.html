@@ -1550,7 +1550,11 @@
 
       // 2. Initialize local database safely
       try {
-        await initDB();
+        await getDB();
+        refreshSidebarContacts();
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "fetch_offline", from: myId }));
+        }
       } catch(e) {
         console.warn("initDB warning:", e);
       }
@@ -1866,40 +1870,73 @@
     }
 
     // INDEXEDDB
+    let dbInstance = null;
+    let dbInitPromise = null;
+
+    function getDB() {
+      if (dbInstance) return Promise.resolve(dbInstance);
+      if (db) { dbInstance = db; return Promise.resolve(db); }
+      if (dbInitPromise) return dbInitPromise;
+      dbInitPromise = initDB().then(database => {
+        dbInstance = database;
+        db = database;
+        return database;
+      });
+      return dbInitPromise;
+    }
+
     function initDB() {
-      return new Promise((resolve, reject) => {
-        const safeId = myId.replace(/[^a-zA-Z0-9]/g, "_");
-        const request = indexedDB.open("VirgoDB_" + safeId, 12);
-        request.onupgradeneeded = (e) => {
-          const d = e.target.result;
-          if (!d.objectStoreNames.contains("messages")) {
-            const store = d.createObjectStore("messages", { keyPath: "id" });
-            store.createIndex("chatWith", "chatWith", { unique: false });
-          }
-        };
-        request.onsuccess = (e) => {
-          db = e.target.result;
-          refreshSidebarContacts();
-          resolve(db);
-        };
-        request.onerror = reject;
+      return new Promise((resolve) => {
+        try {
+          const safeId = (myId || "guest").replace(/[^a-zA-Z0-9]/g, "_");
+          const request = indexedDB.open("VirgoDB_" + safeId, 12);
+          request.onupgradeneeded = (e) => {
+            const d = e.target.result;
+            if (!d.objectStoreNames.contains("messages")) {
+              const store = d.createObjectStore("messages", { keyPath: "id" });
+              store.createIndex("chatWith", "chatWith", { unique: false });
+            }
+          };
+          request.onsuccess = (e) => {
+            dbInstance = e.target.result;
+            db = dbInstance;
+            resolve(dbInstance);
+            refreshSidebarContacts();
+          };
+          request.onerror = () => resolve(null);
+          request.onblocked = () => resolve(null);
+        } catch (err) {
+          resolve(null);
+        }
       });
     }
 
-    function saveMessageToLocal(msgObj) {
-      if (!db) return;
-      const tx = db.transaction("messages", "readwrite");
-      tx.objectStore("messages").put(msgObj);
-      tx.oncomplete = () => refreshSidebarContacts();
+    async function saveMessageToLocal(msgObj) {
+      if (!msgObj) return;
+      try {
+        const database = await getDB();
+        if (!database) {
+          console.warn("DB not ready, retrying save in 400ms...");
+          setTimeout(() => saveMessageToLocal(msgObj), 400);
+          return;
+        }
+        const tx = database.transaction("messages", "readwrite");
+        tx.objectStore("messages").put(msgObj);
+        tx.oncomplete = () => refreshSidebarContacts();
+      } catch (e) {
+        console.warn("saveMessageToLocal error:", e);
+      }
     }
 
-    function refreshSidebarContacts() {
-      if (!db) return;
-      const tx = db.transaction("messages", "readonly");
-      const store = tx.objectStore("messages");
-      const req = store.getAll();
+    async function refreshSidebarContacts() {
+      const database = await getDB();
+      if (!database) return;
+      try {
+        const tx = database.transaction("messages", "readonly");
+        const store = tx.objectStore("messages");
+        const req = store.getAll();
 
-      req.onsuccess = async () => {
+        req.onsuccess = async () => {
         const allMsgs = req.result || [];
         const threads = {};
 
@@ -1914,6 +1951,7 @@
         allContactsCache = sortedContacts;
         renderSidebar(sortedContacts, threads);
       };
+      } catch(e) {}
     }
 
     async function renderSidebar(contactIds, threads) {
@@ -2173,12 +2211,17 @@
       alert(`Voice Link: Connecting to ${activeChatId}... (Audio streaming ready)`);
     }
 
-    function loadChatHistory() {
-      if (!db || !activeChatId) return;
+    async function loadChatHistory() {
+      if (!activeChatId) return;
+      const database = await getDB();
+      if (!database) {
+        setTimeout(loadChatHistory, 300);
+        return;
+      }
       const box = document.getElementById("messages-viewport");
       box.innerHTML = "";
 
-      const tx = db.transaction("messages", "readonly");
+      const tx = database.transaction("messages", "readonly");
       const index = tx.objectStore("messages").index("chatWith");
       const req = index.getAll(activeChatId);
 
@@ -2201,6 +2244,10 @@
         ws.onopen = () => {
           console.log("WebSocket connected as", myId);
           flushPendingOutbox();
+          // Explicitly pull any pending messages sent while app was closed
+          try {
+            ws.send(JSON.stringify({ type: "fetch_offline", from: myId }));
+          } catch(e) {}
         };
 
         ws.onmessage = async (event) => {

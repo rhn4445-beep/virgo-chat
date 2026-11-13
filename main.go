@@ -559,7 +559,15 @@ func (c *Client) readPump(hub *Hub) {
 			continue
 		}
 
+		if env.Type == "fetch_offline" {
+			go hub.deliverPendingMessages(c)
+			continue
+		}
+
 		if env.Type == "read_receipt" || env.Type == "delivery_receipt" {
+			if env.ID != "" {
+				hub.db.Exec("DELETE FROM pending_messages WHERE id = ?;", env.ID)
+			}
 			target := strings.ToLower(strings.TrimSpace(env.To))
 			hub.mutex.Lock()
 			if peer, ok := hub.clients[target]; ok {
@@ -568,10 +576,6 @@ func (c *Client) readPump(hub *Hub) {
 					case peer.Send <- msg:
 					default:
 					}
-				}
-			} else {
-				if msg, err := json.Marshal(env); err == nil {
-					hub.storePendingMessage(fmt.Sprintf("%s-%d", env.Type, time.Now().UnixNano()), c.ID, target, msg)
 				}
 			}
 			hub.mutex.Unlock()
