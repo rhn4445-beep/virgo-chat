@@ -377,6 +377,21 @@ func (h *Hub) run() {
 					select {
 					case recipient.Send <- message:
 						log.Printf("📩 Delivered [%s] from %s to %s", env.Type, sender, target)
+						if (env.Type == "chat" || env.Type == "media") && env.ID != "" {
+							if senderClient, senderActive := h.clients[sender]; senderActive {
+								delivAck, _ := json.Marshal(Envelope{
+									ID:        env.ID,
+									From:      target,
+									To:        sender,
+									Type:      "delivery_receipt",
+									Timestamp: time.Now().UnixMilli(),
+								})
+								select {
+								case senderClient.Send <- delivAck:
+								default:
+								}
+							}
+						}
 					default:
 						h.storePendingMessage(env.ID, sender, target, message)
 					}
@@ -445,6 +460,26 @@ func (h *Hub) deliverPendingMessages(c *Client) {
 		if err := rows.Scan(&id, &payload); err == nil {
 			c.Send <- []byte(payload)
 			deliveredIDs = append(deliveredIDs, id)
+			var env Envelope
+			if err := json.Unmarshal([]byte(payload), &env); err == nil && env.From != "" {
+				if (env.Type == "chat" || env.Type == "media") && env.ID != "" {
+					h.mutex.Lock()
+					if senderClient, ok := h.clients[strings.ToLower(env.From)]; ok {
+						delivAck, _ := json.Marshal(Envelope{
+							ID:        env.ID,
+							From:      c.ID,
+							To:        env.From,
+							Type:      "delivery_receipt",
+							Timestamp: time.Now().UnixMilli(),
+						})
+						select {
+						case senderClient.Send <- delivAck:
+						default:
+						}
+					}
+					h.mutex.Unlock()
+				}
+			}
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -509,6 +544,25 @@ func (c *Client) readPump(hub *Hub) {
 				Timestamp: time.Now().UnixMilli(),
 			})
 			c.Send <- respEnv
+			continue
+		}
+
+		if env.Type == "read_receipt" || env.Type == "delivery_receipt" {
+			target := strings.ToLower(strings.TrimSpace(env.To))
+			hub.mutex.Lock()
+			if peer, ok := hub.clients[target]; ok {
+				if msg, err := json.Marshal(env); err == nil {
+					select {
+					case peer.Send <- msg:
+					default:
+					}
+				}
+			} else {
+				if msg, err := json.Marshal(env); err == nil {
+					hub.storePendingMessage(fmt.Sprintf("%s-%d", env.Type, time.Now().UnixNano()), c.ID, target, msg)
+				}
+			}
+			hub.mutex.Unlock()
 			continue
 		}
 

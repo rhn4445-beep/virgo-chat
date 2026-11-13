@@ -611,9 +611,13 @@
       color: var(--text-muted);
       user-select: none;
     }
-    .msg-bubble.sent .bubble-meta { color: rgba(245, 197, 66, 0.8); }
-    .status-check svg { width: 15px; height: 11px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .status-check.blue svg { stroke: var(--virgo-gold-bright); }
+    .msg-bubble.sent .bubble-meta { color: rgba(255, 255, 255, 0.65); display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; }
+    .status-check { display: inline-flex; align-items: center; vertical-align: middle; }
+    .status-check svg { width: 16px; height: 11px; fill: none; stroke: rgba(255, 255, 255, 0.65); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: inline-block; vertical-align: middle; }
+    .status-check.status-clock svg { width: 12px; height: 12px; stroke: rgba(255, 255, 255, 0.5); stroke-width: 1.8; }
+    .status-check.sent svg { stroke: rgba(255, 255, 255, 0.65); }
+    .status-check.delivered svg { stroke: rgba(255, 255, 255, 0.65); }
+    .status-check.read svg { stroke: #34b7f1 !important; filter: drop-shadow(0 0 2px rgba(52, 183, 241, 0.5)); }
 
     .msg-bubble img {
       max-width: 280px;
@@ -812,9 +816,13 @@
       #mobile-bottom-nav { display: flex; }
       body.in-chat #mobile-bottom-nav { display: none; }
       #fab-new-chat {
-        bottom: calc(60px + 20px + env(safe-area-inset-bottom, 0px));
+        position: fixed;
+        bottom: calc(65px + 16px + env(safe-area-inset-bottom, 0px));
         right: 20px;
-        z-index: 35;
+        z-index: 45;
+      }
+      body.in-chat #fab-new-chat {
+        display: none !important;
       }
     }
   </style>
@@ -1208,9 +1216,112 @@
     const WS_BASE = isLocalDev ? `ws://${window.location.host}` : "wss://virgo-chat.onrender.com";
 
     const SVG_ICONS = {
-      singleCheck: `<span class="status-check"><svg viewBox="0 0 16 11"><path d="M1 5.5L5.5 10L15 1"/></svg></span>`,
-      doubleCheck: `<span class="status-check blue"><svg viewBox="0 0 22 11"><path d="M1 5.5L5.5 10L15 1"/><path d="M7 5.5L11.5 10L21 1"/></svg></span>`
+      clock: `<span class="status-check status-clock" title="Pending"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><polyline points="8 4 8 8 10.5 8"/></svg></span>`,
+      sent: `<span class="status-check sent" title="Sent"><svg viewBox="0 0 16 11"><path d="M1 5.5L5.5 10L15 1"/></svg></span>`,
+      delivered: `<span class="status-check delivered" title="Delivered"><svg viewBox="0 0 22 11"><path d="M1 5.5L5.5 10L15 1"/><path d="M7 5.5L11.5 10L21 1"/></svg></span>`,
+      read: `<span class="status-check read" title="Seen"><svg viewBox="0 0 22 11"><path d="M1 5.5L5.5 10L15 1"/><path d="M7 5.5L11.5 10L21 1"/></svg></span>`
     };
+
+    function getTickHtml(status) {
+      if (status === "pending") return SVG_ICONS.clock;
+      if (status === "delivered") return SVG_ICONS.delivered;
+      if (status === "read") return SVG_ICONS.read;
+      return SVG_ICONS.sent;
+    }
+
+    function updateMessageStatusInDomAndDb(msgId, newStatus) {
+      if (!msgId) return;
+      const el = document.getElementById(`tick-${msgId}`);
+      if (el) {
+        el.innerHTML = getTickHtml(newStatus);
+      }
+      if (!db) return;
+      try {
+        const tx = db.transaction("messages", "readwrite");
+        const store = tx.objectStore("messages");
+        const req = store.get(msgId);
+        req.onsuccess = () => {
+          if (req.result) {
+            const data = req.result;
+            const rank = { pending: 0, sent: 1, delivered: 2, read: 3 };
+            if ((rank[newStatus] || 0) >= (rank[data.status || 'sent'] || 0)) {
+              data.status = newStatus;
+              store.put(data);
+            }
+          }
+        };
+      } catch (e) {}
+    }
+
+    function markAllSentMessagesReadForPeer(peerId) {
+      if (!peerId) return;
+      const target = peerId.toLowerCase().trim();
+      if (activeChatId === target) {
+        document.querySelectorAll(".msg-bubble.sent .bubble-meta span[id^='tick-']").forEach(span => {
+          span.innerHTML = SVG_ICONS.read;
+        });
+      }
+      if (!db) return;
+      try {
+        const tx = db.transaction("messages", "readwrite");
+        const store = tx.objectStore("messages");
+        const index = store.index("chatWith");
+        const req = index.getAll(target);
+        req.onsuccess = () => {
+          (req.result || []).forEach(m => {
+            if (m.direction === "sent" && m.status !== "read") {
+              m.status = "read";
+              store.put(m);
+            }
+          });
+        };
+      } catch (e) {}
+    }
+
+    async function flushPendingOutbox() {
+      if (!db || !ws || ws.readyState !== WebSocket.OPEN) return;
+      try {
+        const tx = db.transaction("messages", "readonly");
+        const store = tx.objectStore("messages");
+        const req = store.getAll();
+        req.onsuccess = async () => {
+          const msgs = req.result || [];
+          for (const m of msgs) {
+            if (m.direction === "sent" && m.status === "pending") {
+              updateMessageStatusInDomAndDb(m.id, "sent");
+              if (m.mediaType) {
+                ws.send(JSON.stringify({
+                  id: m.id,
+                  from: myId,
+                  to: m.chatWith,
+                  type: "media",
+                  payload: { url: m.content, mediaType: m.mediaType }
+                }));
+              } else {
+                const encrypted = await encryptText(m.chatWith, m.content);
+                if (encrypted) {
+                  ws.send(JSON.stringify({
+                    id: m.id,
+                    from: myId,
+                    to: m.chatWith,
+                    type: "chat",
+                    payload: { ciphertext: encrypted.ciphertext, iv: encrypted.iv }
+                  }));
+                } else {
+                  ws.send(JSON.stringify({
+                    id: m.id,
+                    from: myId,
+                    to: m.chatWith,
+                    type: "chat",
+                    payload: { text: m.content }
+                  }));
+                }
+              }
+            }
+          }
+        };
+      } catch (e) {}
+    }
 
     var ws = null;
     let myId = "";
@@ -1828,13 +1939,22 @@
         }
 
         const pubKey = await exportPublicKey();
-        if (ws && ws.readyState === WebSocket.OPEN && pubKey) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          if (pubKey) {
+            ws.send(JSON.stringify({
+              id: "key-" + Date.now(),
+              from: myId,
+              to: activeChatId,
+              type: "key_exchange",
+              payload: { jwk: pubKey }
+            }));
+          }
           ws.send(JSON.stringify({
-            id: "key-" + Date.now(),
             from: myId,
             to: activeChatId,
-            type: "key_exchange",
-            payload: { jwk: pubKey }
+            type: "read_receipt",
+            payload: { all: true },
+            timestamp: Date.now()
           }));
         }
 
@@ -1900,7 +2020,7 @@
       req.onsuccess = () => {
         const msgs = req.result || [];
         msgs.sort((a, b) => a.timestamp - b.timestamp);
-        msgs.forEach(m => displayMessage(m.content, m.direction, m.id, m.mediaType, m.timestamp));
+        msgs.forEach(m => displayMessage(m.content, m.direction, m.id, m.mediaType, m.timestamp, m.status));
       };
     }
 
@@ -1911,9 +2031,32 @@
       const wsUrl = `${WS_BASE}/ws?userId=${encodeURIComponent(myId)}`;
       ws = new WebSocket(wsUrl);
 
+      ws.onopen = () => {
+        flushPendingOutbox();
+      };
+
       ws.onmessage = async (event) => {
         try {
           const env = JSON.parse(event.data);
+
+          if (env.type === "ack") {
+            updateMessageStatusInDomAndDb(env.id, "sent");
+            return;
+          }
+
+          if (env.type === "delivery_receipt") {
+            updateMessageStatusInDomAndDb(env.id, "delivered");
+            return;
+          }
+
+          if (env.type === "read_receipt") {
+            if (env.payload && env.payload.all) {
+              markAllSentMessagesReadForPeer(env.from);
+            } else if (env.id) {
+              updateMessageStatusInDomAndDb(env.id, "read");
+            }
+            return;
+          }
 
           if (env.type === "profile_update") {
             profileCache[env.from] = env.payload;
@@ -2000,7 +2143,25 @@
 
       if (senderId === activeChatId) {
         displayMessage(text, "received", env.id, null, env.timestamp);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            id: env.id,
+            from: myId,
+            to: senderId,
+            type: "read_receipt",
+            timestamp: Date.now()
+          }));
+        }
       } else {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            id: env.id,
+            from: myId,
+            to: senderId,
+            type: "delivery_receipt",
+            timestamp: Date.now()
+          }));
+        }
         unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
         refreshSidebarContacts();
       }
@@ -2027,7 +2188,25 @@
 
       if (senderId === activeChatId) {
         displayMessage(mediaUrl, "received", env.id, env.payload.mediaType, env.timestamp);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            id: env.id,
+            from: myId,
+            to: senderId,
+            type: "read_receipt",
+            timestamp: Date.now()
+          }));
+        }
       } else {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            id: env.id,
+            from: myId,
+            to: senderId,
+            type: "delivery_receipt",
+            timestamp: Date.now()
+          }));
+        }
         unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
         refreshSidebarContacts();
       }
@@ -2039,8 +2218,11 @@
       const text = input.value.trim();
       if (!text || !activeChatId) return;
 
-      const msgId = "msg-" + Date.now();
-      displayMessage(text, "sent", msgId, null, Date.now());
+      const msgId = "msg-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5);
+      const isOnline = ws && ws.readyState === WebSocket.OPEN;
+      const initialStatus = isOnline ? "sent" : "pending";
+
+      displayMessage(text, "sent", msgId, null, Date.now(), initialStatus);
 
       saveMessageToLocal({
         id: msgId,
@@ -2048,26 +2230,29 @@
         content: text,
         direction: "sent",
         mediaType: null,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        status: initialStatus
       });
 
-      const encrypted = await encryptText(activeChatId, text);
-      if (encrypted) {
-        ws.send(JSON.stringify({
-          id: msgId,
-          from: myId,
-          to: activeChatId,
-          type: "chat",
-          payload: { ciphertext: encrypted.ciphertext, iv: encrypted.iv }
-        }));
-      } else {
-        ws.send(JSON.stringify({
-          id: msgId,
-          from: myId,
-          to: activeChatId,
-          type: "chat",
-          payload: { text: text }
-        }));
+      if (isOnline) {
+        const encrypted = await encryptText(activeChatId, text);
+        if (encrypted) {
+          ws.send(JSON.stringify({
+            id: msgId,
+            from: myId,
+            to: activeChatId,
+            type: "chat",
+            payload: { ciphertext: encrypted.ciphertext, iv: encrypted.iv }
+          }));
+        } else {
+          ws.send(JSON.stringify({
+            id: msgId,
+            from: myId,
+            to: activeChatId,
+            type: "chat",
+            payload: { text: text }
+          }));
+        }
       }
 
       input.value = "";
@@ -2075,19 +2260,20 @@
       document.getElementById("btn-mic").style.display = "flex";
     }
 
-    function displayMessage(content, direction, msgId, mediaType, timestamp) {
+    function displayMessage(content, direction, msgId, mediaType, timestamp, status) {
       const box = document.getElementById("messages-viewport");
       const div = document.createElement("div");
       div.className = `msg-bubble ${direction}`;
 
       const timeStr = new Date(timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const tickSpan = direction === 'sent' ? `<span id="tick-${msgId}">${getTickHtml(status || 'sent')}</span>` : '';
 
       if (mediaType === "image") {
         div.innerHTML = `
           <img src="${content}" onclick="openImageModal(this.src)" alt="Photo">
           <div class="bubble-meta">
             <span>${timeStr}</span>
-            ${direction === 'sent' ? SVG_ICONS.doubleCheck : ''}
+            ${tickSpan}
           </div>
         `;
       } else if (mediaType === "video") {
@@ -2095,7 +2281,7 @@
           <video controls src="${content}" style="max-width:100%;border-radius:12px;display:block;margin-bottom:4px;"></video>
           <div class="bubble-meta">
             <span>${timeStr}</span>
-            ${direction === 'sent' ? SVG_ICONS.doubleCheck : ''}
+            ${tickSpan}
           </div>
         `;
       } else if (mediaType === "audio") {
@@ -2103,7 +2289,7 @@
           <audio controls src="${content}"></audio>
           <div class="bubble-meta">
             <span>${timeStr}</span>
-            ${direction === 'sent' ? SVG_ICONS.doubleCheck : ''}
+            ${tickSpan}
           </div>
         `;
       } else {
@@ -2113,7 +2299,7 @@
           <span>${linked}</span>
           <div class="bubble-meta">
             <span>${timeStr}</span>
-            ${direction === 'sent' ? SVG_ICONS.doubleCheck : ''}
+            ${tickSpan}
           </div>
         `;
       }
@@ -2135,9 +2321,12 @@
 
         if (data.url) {
           let fullUrl = data.url.startsWith("/") ? BACKEND_BASE + data.url : data.url;
-          const msgId = "media-" + Date.now();
+          const msgId = "media-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5);
           const mediaType = file.type.startsWith("audio/") ? "audio" : (file.type.startsWith("video/") ? "video" : "image");
-          displayMessage(fullUrl, "sent", msgId, mediaType, Date.now());
+          const isOnline = ws && ws.readyState === WebSocket.OPEN;
+          const initialStatus = isOnline ? "sent" : "pending";
+
+          displayMessage(fullUrl, "sent", msgId, mediaType, Date.now(), initialStatus);
 
           saveMessageToLocal({
             id: msgId,
@@ -2145,16 +2334,19 @@
             content: fullUrl,
             direction: "sent",
             mediaType: mediaType,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            status: initialStatus
           });
 
-          ws.send(JSON.stringify({
-            id: msgId,
-            from: myId,
-            to: targetId,
-            type: "media",
-            payload: { url: fullUrl, mediaType: mediaType }
-          }));
+          if (isOnline) {
+            ws.send(JSON.stringify({
+              id: msgId,
+              from: myId,
+              to: targetId,
+              type: "media",
+              payload: { url: fullUrl, mediaType: mediaType }
+            }));
+          }
         }
       } catch (err) {
         alert("Upload error: " + err);
@@ -2193,10 +2385,14 @@
           const data = await res.json();
           if (data.url) {
             let fullUrl = data.url.startsWith("/") ? BACKEND_BASE + data.url : data.url;
-            const msgId = "media-" + Date.now();
-            displayMessage(fullUrl, "sent", msgId, "audio", Date.now());
-            saveMessageToLocal({ id: msgId, chatWith: activeChatId, content: fullUrl, direction: "sent", mediaType: "audio", timestamp: Date.now() });
-            ws.send(JSON.stringify({ id: msgId, from: myId, to: activeChatId, type: "media", payload: { url: fullUrl, mediaType: "audio" } }));
+            const msgId = "media-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5);
+            const isOnline = ws && ws.readyState === WebSocket.OPEN;
+            const initialStatus = isOnline ? "sent" : "pending";
+            displayMessage(fullUrl, "sent", msgId, "audio", Date.now(), initialStatus);
+            saveMessageToLocal({ id: msgId, chatWith: activeChatId, content: fullUrl, direction: "sent", mediaType: "audio", timestamp: Date.now(), status: initialStatus });
+            if (isOnline) {
+              ws.send(JSON.stringify({ id: msgId, from: myId, to: activeChatId, type: "media", payload: { url: fullUrl, mediaType: "audio" } }));
+            }
           }
         };
 
