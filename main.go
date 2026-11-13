@@ -40,6 +40,8 @@ type Client struct {
 	Send chan []byte
 }
 
+var serverBuildTime = fmt.Sprintf("v%d", time.Now().Unix())
+
 type Hub struct {
 	clients    map[string]*Client
 	groups     map[string]map[string]bool
@@ -415,6 +417,11 @@ func (h *Hub) storePendingMessage(msgID, from, to string, raw []byte) {
 		log.Printf("Error storing pending message: %v", err)
 	}
 
+	rawStr := string(raw)
+	if !strings.Contains(rawStr, `"type":"chat"`) && !strings.Contains(rawStr, `"type":"media"`) {
+		return
+	}
+
 	go func(targetUser, fromUser string) {
 		var subJSON string
 		err := h.db.QueryRow(`SELECT subscription FROM push_subscriptions WHERE user_id = ?;`, targetUser).Scan(&subJSON)
@@ -640,6 +647,17 @@ func main() {
 	http.HandleFunc("/upload", handleUpload)
 	http.HandleFunc("/api/profile", handleProfile(db, hub))
 
+	http.HandleFunc("/api/version", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		w.Write([]byte(fmt.Sprintf(`{"version":"%s"}`, serverBuildTime)))
+	})
+
 	http.HandleFunc("/api/push/subscribe", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -717,6 +735,19 @@ func main() {
 
 		client := &Client{ID: userId, Conn: conn, Send: make(chan []byte, 256)}
 		hub.register <- client
+
+		verEnv, _ := json.Marshal(Envelope{
+			ID:        fmt.Sprintf("ver-%d", time.Now().UnixMilli()),
+			From:      "server",
+			To:        userId,
+			Type:      "app_version",
+			Payload:   json.RawMessage(fmt.Sprintf(`{"version":"%s"}`, serverBuildTime)),
+			Timestamp: time.Now().UnixMilli(),
+		})
+		select {
+		case client.Send <- verEnv:
+		default:
+		}
 
 		go client.writePump()
 		go client.readPump(hub)

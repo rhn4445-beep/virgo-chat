@@ -825,9 +825,74 @@
         display: none !important;
       }
     }
+  
+    /* OTA UPDATE NOTIFICATION BANNER */
+    .ota-update-banner {
+      position: fixed;
+      top: calc(14px + env(safe-area-inset-top, 0px));
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 32px);
+      max-width: 420px;
+      background: linear-gradient(135deg, rgba(20, 29, 45, 0.98), rgba(12, 18, 29, 0.98));
+      border: 1.5px solid var(--virgo-gold);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 18px var(--virgo-gold-glow);
+      border-radius: 16px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 99999;
+      backdrop-filter: blur(16px);
+      animation: slideDownUpdate 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes slideDownUpdate {
+      from { opacity: 0; transform: translate(-50%, -24px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    .update-banner-icon { font-size: 24px; flex-shrink: 0; }
+    .update-banner-info { flex: 1; min-width: 0; }
+    .update-banner-title { font-size: 14px; font-weight: 700; color: #fff; line-height: 1.2; }
+    .update-banner-desc { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+    .update-banner-btn {
+      background: linear-gradient(135deg, var(--virgo-gold-bright), var(--virgo-gold));
+      border: none;
+      border-radius: 10px;
+      color: #06090e;
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 8px 14px;
+      cursor: pointer;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(245, 197, 66, 0.4);
+      transition: transform 0.15s;
+    }
+    .update-banner-btn:active { transform: scale(0.95); }
+    .update-banner-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 2px 6px;
+      flex-shrink: 0;
+    }
+
   </style>
 </head>
 <body>
+
+  <!-- OTA UPDATE IN-APP BANNER -->
+  <div id="ota-update-banner" class="ota-update-banner" style="display:none;">
+    <div class="update-banner-icon">✨</div>
+    <div class="update-banner-info">
+      <div class="update-banner-title">New Update Available</div>
+      <div class="update-banner-desc">A new version of Virgo is ready.</div>
+    </div>
+    <button class="update-banner-btn" onclick="applyInstantUpdate()">Update Now</button>
+    <button class="update-banner-close" onclick="dismissUpdateBanner()">✕</button>
+  </div>
+
 
   <!-- DESKTOP LEFT NAVIGATION RAIL -->
   <div id="desktop-nav-rail">
@@ -1213,6 +1278,64 @@
     // AUTOMATIC HOST SELECTION
     const isLocalDev = window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
+    
+    let activeClientVersion = sessionStorage.getItem("virgo_active_version") || "";
+    let updateBannerDismissed = false;
+
+    function handleIncomingAppVersion(newVersion) {
+      if (!newVersion) return;
+      if (!activeClientVersion) {
+        activeClientVersion = newVersion;
+        sessionStorage.setItem("virgo_active_version", newVersion);
+        return;
+      }
+      if (newVersion !== activeClientVersion && !updateBannerDismissed) {
+        showUpdateNotificationBanner(newVersion);
+      }
+    }
+
+    function showUpdateNotificationBanner(newVersion) {
+      const banner = document.getElementById("ota-update-banner");
+      if (banner) {
+        banner.style.display = "flex";
+      }
+      if ("Notification" in window && Notification.permission === "granted") {
+        try {
+          new Notification("Virgo Update Available", {
+            body: "A new version of Virgo is ready. Tap to update.",
+            icon: "icon.png"
+          });
+        } catch (e) {}
+      }
+    }
+
+    function dismissUpdateBanner() {
+      updateBannerDismissed = true;
+      const banner = document.getElementById("ota-update-banner");
+      if (banner) banner.style.display = "none";
+    }
+
+    function applyInstantUpdate() {
+      sessionStorage.removeItem("virgo_active_version");
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: "SKIP_WAITING" });
+      }
+      window.location.reload(true);
+    }
+
+    async function pollForAppUpdates() {
+      try {
+        const res = await fetch(`${BACKEND_BASE}/api/version?t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.version) {
+            handleIncomingAppVersion(data.version);
+          }
+        }
+      } catch (e) {}
+    }
+    setInterval(pollForAppUpdates, 25000);
+
     const WS_BASE = isLocalDev ? `ws://${window.location.host}` : "wss://virgo-chat.onrender.com";
 
     const SVG_ICONS = {
@@ -2039,6 +2162,13 @@
         try {
           const env = JSON.parse(event.data);
 
+          if (env.type === "app_version") {
+            if (env.payload && env.payload.version) {
+              handleIncomingAppVersion(env.payload.version);
+            }
+            return;
+          }
+
           if (env.type === "ack") {
             updateMessageStatusInDomAndDb(env.id, "sent");
             return;
@@ -2113,21 +2243,32 @@
 
     async function processInboundChatMessage(env) {
       const senderId = env.from.toLowerCase().trim();
-      let text = env.payload.text || "";
+      let text = (env.payload && env.payload.text) ? env.payload.text : "";
 
-      if (env.payload.ciphertext) {
-        if (!sharedKeys[senderId]) {
-          const cached = await getPeerPublicKey(senderId);
-          if (cached) {
-            await deriveSharedKey(cached, senderId);
-          } else {
-            pendingCiphertextQueue.push(env);
-            return;
+      if (env.payload && env.payload.ciphertext) {
+        try {
+          if (env.payload.senderJwk) {
+            await deriveSharedKey(env.payload.senderJwk, senderId);
+          } else if (!sharedKeys[senderId]) {
+            const cached = await getPeerPublicKey(senderId);
+            if (cached) {
+              await deriveSharedKey(cached, senderId);
+            }
           }
+
+          if (sharedKeys[senderId]) {
+            text = await decryptPayload(senderId, env.payload.ciphertext, env.payload.iv);
+          }
+        } catch (err) {
+          console.error("Decryption failed:", err);
         }
-        text = await decryptPayload(senderId, env.payload.ciphertext, env.payload.iv);
+
+        if (!text) {
+          text = env.payload.text || "🔐 [Encrypted Message]";
+        }
       }
-      if (!text) return;
+
+      if (!text) text = "💬 [Message]";
 
       playMessageChime();
 
@@ -2235,6 +2376,7 @@
       });
 
       if (isOnline) {
+        const pubKey = await exportPublicKey();
         const encrypted = await encryptText(activeChatId, text);
         if (encrypted) {
           ws.send(JSON.stringify({
@@ -2242,7 +2384,11 @@
             from: myId,
             to: activeChatId,
             type: "chat",
-            payload: { ciphertext: encrypted.ciphertext, iv: encrypted.iv }
+            payload: {
+              ciphertext: encrypted.ciphertext,
+              iv: encrypted.iv,
+              senderJwk: pubKey
+            }
           }));
         } else {
           ws.send(JSON.stringify({
@@ -2250,7 +2396,7 @@
             from: myId,
             to: activeChatId,
             type: "chat",
-            payload: { text: text }
+            payload: { text: text, senderJwk: pubKey }
           }));
         }
       }
@@ -2293,7 +2439,8 @@
           </div>
         `;
       } else {
-        const escaped = content.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const safeContent = String(content || "");
+        const escaped = safeContent.replace(/</g, "&lt;").replace(/>/g, "&gt;");
         const linked = escaped.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:var(--virgo-gold-bright);text-decoration:underline;">$1</a>');
         div.innerHTML = `
           <span>${linked}</span>
