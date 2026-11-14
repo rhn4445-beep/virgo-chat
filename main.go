@@ -40,7 +40,59 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = "v2.4.0"
+var serverBuildTime = "v2.5.0"
+
+func normalizeUserID(raw string) string {
+	s := strings.ToLower(strings.TrimSpace(raw))
+	if s == "" {
+		return ""
+	}
+	if strings.Contains(s, "@") {
+		return s
+	}
+	var digits strings.Builder
+	hasLetter := false
+	for _, ch := range s {
+		if ch >= '0' && ch <= '9' {
+			digits.WriteRune(ch)
+		} else if (ch >= 'a' && ch <= 'z') || ch == '_' {
+			hasLetter = true
+		}
+	}
+	if !hasLetter && digits.Len() >= 10 {
+		d := digits.String()
+		if len(d) == 12 && strings.HasPrefix(d, "91") {
+			return d[2:]
+		}
+		if len(d) == 11 && strings.HasPrefix(d, "0") {
+			return d[1:]
+		}
+		if len(d) == 10 {
+			return d
+		}
+		return d
+	}
+	return s
+}
+
+func (h *Hub) findClient(target string) *Client {
+	if target == "" {
+		return nil
+	}
+	norm := normalizeUserID(target)
+	if client, ok := h.clients[norm]; ok {
+		return client
+	}
+	if client, ok := h.clients[target]; ok {
+		return client
+	}
+	for id, client := range h.clients {
+		if normalizeUserID(id) == norm {
+			return client
+		}
+	}
+	return nil
+}
 
 type Hub struct {
 	clients    map[string]*Client
@@ -348,8 +400,8 @@ func (h *Hub) run() {
 				continue
 			}
 
-			sender := strings.ToLower(strings.TrimSpace(env.From))
-			target := strings.ToLower(strings.TrimSpace(env.To))
+			sender := normalizeUserID(env.From)
+			target := normalizeUserID(env.To)
 
 			h.mutex.Lock()
 			if target == "all" {
@@ -375,12 +427,13 @@ func (h *Hub) run() {
 					}
 				}
 			} else {
-				if recipient, exists := h.clients[target]; exists {
+				recipient := h.findClient(target)
+				if recipient != nil {
 					select {
 					case recipient.Send <- message:
 						log.Printf("📩 Delivered [%s] from %s to %s", env.Type, sender, target)
 						if (env.Type == "chat" || env.Type == "media") && env.ID != "" {
-							if senderClient, senderActive := h.clients[sender]; senderActive {
+							if senderClient := h.findClient(sender); senderClient != nil {
 								delivAck, _ := json.Marshal(Envelope{
 									ID:        env.ID,
 									From:      target,
@@ -464,8 +517,9 @@ func (h *Hub) deliverPendingMessages(c *Client) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
-	query := `SELECT id, payload FROM pending_messages WHERE recipient_id = ? ORDER BY timestamp ASC;`
-	rows, err := h.db.Query(query, c.ID)
+	normID := normalizeUserID(c.ID)
+	query := `SELECT id, payload FROM pending_messages WHERE recipient_id = ? OR recipient_id = ? OR recipient_id = ? OR recipient_id = ? ORDER BY timestamp ASC;`
+	rows, err := h.db.Query(query, c.ID, normID, "+91"+normID, "91"+normID)
 	if err != nil {
 		log.Printf("Query error fetching offline messages: %v", err)
 		return
@@ -485,7 +539,7 @@ func (h *Hub) deliverPendingMessages(c *Client) {
 			var env Envelope
 			if err := json.Unmarshal([]byte(payload), &env); err == nil && env.From != "" {
 				if (env.Type == "chat" || env.Type == "media") && env.ID != "" {
-					senderTarget := strings.ToLower(env.From)
+					senderTarget := normalizeUserID(env.From)
 					delivAck, _ := json.Marshal(Envelope{
 						ID:        env.ID,
 						From:      c.ID,
@@ -493,7 +547,7 @@ func (h *Hub) deliverPendingMessages(c *Client) {
 						Type:      "delivery_receipt",
 						Timestamp: time.Now().UnixMilli(),
 					})
-					if senderClient, ok := h.clients[senderTarget]; ok {
+					if senderClient := h.findClient(senderTarget); senderClient != nil {
 						select {
 						case senderClient.Send <- delivAck:
 						default:
@@ -526,6 +580,12 @@ func (c *Client) readPump(hub *Hub) {
 		c.Conn.Close()
 	}()
 
+	c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	c.Conn.SetPongHandler(func(string) error {
+		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
+
 	for {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
@@ -537,9 +597,26 @@ func (c *Client) readPump(hub *Hub) {
 			continue
 		}
 
+		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+
 		env.From = c.ID
-		target := strings.ToLower(strings.TrimSpace(env.To))
+		target := normalizeUserID(env.To)
 		env.To = target
+
+		if env.Type == "heartbeat" || env.Type == "ping" {
+			pongEnv, _ := json.Marshal(Envelope{
+				ID:        env.ID,
+				From:      "server",
+				To:        c.ID,
+				Type:      "heartbeat_ack",
+				Timestamp: time.Now().UnixMilli(),
+			})
+			select {
+			case c.Send <- pongEnv:
+			default:
+			}
+			continue
+		}
 
 		if env.Type == "group_join" {
 			hub.mutex.Lock()
@@ -553,7 +630,7 @@ func (c *Client) readPump(hub *Hub) {
 
 		if env.Type == "query_presence" {
 			hub.mutex.Lock()
-			_, isOnline := hub.clients[env.To]
+			isOnline := hub.findClient(env.To) != nil
 			hub.mutex.Unlock()
 
 			status := "offline"
@@ -582,9 +659,10 @@ func (c *Client) readPump(hub *Hub) {
 			if env.ID != "" {
 				hub.db.Exec("DELETE FROM pending_messages WHERE id = ?;", env.ID)
 			}
-			target := strings.ToLower(strings.TrimSpace(env.To))
+			target := normalizeUserID(env.To)
 			hub.mutex.Lock()
-			if peer, ok := hub.clients[target]; ok {
+			peer := hub.findClient(target)
+			if peer != nil {
 				if msg, err := json.Marshal(env); err == nil {
 					select {
 					case peer.Send <- msg:
@@ -624,10 +702,25 @@ func (c *Client) readPump(hub *Hub) {
 }
 
 func (c *Client) writePump() {
-	defer c.Conn.Close()
-	for message := range c.Send {
-		if err := c.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
-			break
+	ticker := time.NewTicker(20 * time.Second)
+	defer func() {
+		ticker.Stop()
+		c.Conn.Close()
+	}()
+	for {
+		select {
+		case message, ok := <-c.Send:
+			if !ok {
+				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+			if err := c.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				return
+			}
+		case <-ticker.C:
+			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
 		}
 	}
 }
@@ -747,9 +840,9 @@ func main() {
 	})
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		userId := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("userId")))
+		userId := normalizeUserID(r.URL.Query().Get("userId"))
 		if userId == "" {
-			userId = strings.ToLower(strings.TrimSpace(r.URL.Query().Get("user")))
+			userId = normalizeUserID(r.URL.Query().Get("user"))
 		}
 		if userId == "" {
 			log.Println("❌ WebSocket rejected: missing userId/user query param")

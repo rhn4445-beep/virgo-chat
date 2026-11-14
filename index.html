@@ -878,9 +878,54 @@
       flex-shrink: 0;
     }
 
+    /* IN-APP MESSAGE TOAST NOTIFICATION */
+    .inapp-msg-toast {
+      position: fixed;
+      top: calc(14px + env(safe-area-inset-top, 0px));
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 32px);
+      max-width: 420px;
+      background: linear-gradient(135deg, rgba(20, 31, 50, 0.98), rgba(10, 16, 26, 0.98));
+      border: 1px solid var(--virgo-gold);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 16px var(--virgo-gold-glow);
+      border-radius: 14px;
+      padding: 10px 14px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      z-index: 99998;
+      cursor: pointer;
+      backdrop-filter: blur(16px);
+      animation: slideDownUpdate 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .inapp-toast-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(245, 197, 66, 0.15);
+      border: 1px solid var(--virgo-gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .inapp-toast-content { flex: 1; min-width: 0; }
+    .inapp-toast-sender { font-size: 13.5px; font-weight: 700; color: var(--virgo-gold-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .inapp-toast-text { font-size: 12px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
   </style>
 </head>
 <body>
+
+  <!-- IN-APP MESSAGE TOAST -->
+  <div id="inapp-msg-toast" class="inapp-msg-toast" onclick="openChatFromInAppToast()">
+    <div class="inapp-toast-avatar">💬</div>
+    <div class="inapp-toast-content">
+      <div id="inapp-toast-sender" class="inapp-toast-sender">Virgo User</div>
+      <div id="inapp-toast-text" class="inapp-toast-text">New message...</div>
+    </div>
+  </div>
 
   <!-- OTA UPDATE IN-APP BANNER -->
   <div id="ota-update-banner" class="ota-update-banner" style="display:none;">
@@ -1286,10 +1331,11 @@
   <!-- JAVASCRIPT CORE LOGIC -->
   <script>
     // AUTOMATIC HOST SELECTION
-    const isLocalDev = window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+    const isCapacitor = !!(window.Capacitor || window.AndroidNative);
+    const isLocalDev = !isCapacitor && window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (window.location.port !== "");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = "v2.4.0";
+    let activeClientVersion = "v2.5.0";
     let updateBannerDismissed = false;
 
     function handleIncomingAppVersion(newVersion) {
@@ -1473,6 +1519,115 @@
     let recTimerInterval = null;
     let recSeconds = 0;
 
+    // ID NORMALIZATION & FUZZY MATCHER
+    function normalizeUserId(raw) {
+      if (!raw) return "";
+      let s = String(raw).toLowerCase().trim();
+      if (s.includes("@")) return s;
+      let digits = "";
+      let hasLetter = false;
+      for (let i = 0; i < s.length; i++) {
+        const ch = s[i];
+        if (ch >= '0' && ch <= '9') digits += ch;
+        else if ((ch >= 'a' && ch <= 'z') || ch === '_') hasLetter = true;
+      }
+      if (!hasLetter && digits.length >= 10) {
+        if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2);
+        if (digits.length === 11 && digits.startsWith("0")) return digits.slice(1);
+        if (digits.length === 10) return digits;
+        return digits;
+      }
+      return s;
+    }
+
+    function isSameUser(id1, id2) {
+      if (!id1 || !id2) return false;
+      const s1 = String(id1).toLowerCase().trim();
+      const s2 = String(id2).toLowerCase().trim();
+      if (s1 === s2) return true;
+      const n1 = normalizeUserId(s1);
+      const n2 = normalizeUserId(s2);
+      return n1 !== "" && n1 === n2;
+    }
+
+    // IN-APP NOTIFICATION BANNER
+    let inAppToastTimeout = null;
+    let toastSenderTarget = "";
+
+    function showInAppNotificationBanner(senderId, snippet) {
+      const toast = document.getElementById("inapp-msg-toast");
+      if (!toast) return;
+      toastSenderTarget = senderId;
+      const senderEl = document.getElementById("inapp-toast-sender");
+      const textEl = document.getElementById("inapp-toast-text");
+      if (senderEl) senderEl.innerText = senderId;
+      if (textEl) textEl.innerText = (snippet || "New message").replace(/<[^>]*>?/gm, '').substring(0, 80);
+      toast.style.display = "flex";
+      if (inAppToastTimeout) clearTimeout(inAppToastTimeout);
+      inAppToastTimeout = setTimeout(() => {
+        toast.style.display = "none";
+      }, 4500);
+    }
+
+    function openChatFromInAppToast() {
+      const toast = document.getElementById("inapp-msg-toast");
+      if (toast) toast.style.display = "none";
+      if (toastSenderTarget) {
+        selectContact(toastSenderTarget);
+      }
+    }
+
+    // RUNTIME NOTIFICATION PERMISSION
+    function requestDeviceNotificationPermission() {
+      try {
+        if (window.AndroidNative && typeof window.AndroidNative.requestPermission === "function") {
+          window.AndroidNative.requestPermission();
+        }
+      } catch(e) {}
+      try {
+        if ("Notification" in window && Notification.permission === "default") {
+          Notification.requestPermission().catch(() => {});
+        }
+      } catch(e) {}
+    }
+
+    // WEBSOCKET KEEPALIVE & LIFECYCLE RECONNECTION
+    let heartbeatInterval = null;
+    function startWebSocketHeartbeat() {
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      heartbeatInterval = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          try {
+            ws.send(JSON.stringify({ type: "heartbeat", from: myId }));
+          } catch(e) {}
+        } else if (myId) {
+          connectWebSocket();
+        }
+      }, 12000);
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && myId) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          connectWebSocket();
+        } else {
+          try {
+            ws.send(JSON.stringify({ type: "fetch_offline", from: myId }));
+          } catch(e) {}
+        }
+      }
+    });
+
+    window.addEventListener("focus", () => {
+      if (myId && (!ws || ws.readyState !== WebSocket.OPEN)) {
+        connectWebSocket();
+      }
+    });
+
+    window.addEventListener("online", () => {
+      if (myId) connectWebSocket();
+    });
+
     // NOTIFICATION & VIBRATION
     function triggerDeviceNotification(senderId, snippet) {
       const title = "Virgo";
@@ -1584,7 +1739,7 @@
     }
 
     async function initAuthenticatedSession(user) {
-      myId = user.toLowerCase().trim();
+      myId = normalizeUserId(user);
       const modal = document.getElementById("welcome-screen-modal");
       if (modal) modal.style.display = "none";
       
@@ -1595,6 +1750,8 @@
 
       const idEl = document.getElementById("lbl-profile-id");
       if (idEl) idEl.innerText = myId;
+
+      requestDeviceNotificationPermission();
 
       // 1. Ensure cryptography and local database are ready FIRST
       try {
@@ -1612,6 +1769,7 @@
 
       // 2. Establish real-time WebSocket connection
       connectWebSocket();
+      startWebSocketHeartbeat();
 
       try {
         await loadMyProfile();
@@ -2000,20 +2158,21 @@
         const req = store.getAll();
 
         req.onsuccess = async () => {
-        const allMsgs = req.result || [];
-        const threads = {};
+          const allMsgs = req.result || [];
+          const threads = {};
 
-        allMsgs.forEach(m => {
-          if (!m.chatWith) return;
-          if (!threads[m.chatWith] || m.timestamp > threads[m.chatWith].timestamp) {
-            threads[m.chatWith] = m;
-          }
-        });
+          allMsgs.forEach(m => {
+            if (!m.chatWith) return;
+            const threadKey = normalizeUserId(m.chatWith) || m.chatWith;
+            if (!threads[threadKey] || m.timestamp > threads[threadKey].timestamp) {
+              threads[threadKey] = m;
+            }
+          });
 
-        const sortedContacts = Object.keys(threads).sort((a, b) => threads[b].timestamp - threads[a].timestamp);
-        allContactsCache = sortedContacts;
-        renderSidebar(sortedContacts, threads);
-      };
+          const sortedContacts = Object.keys(threads).sort((a, b) => threads[b].timestamp - threads[a].timestamp);
+          allContactsCache = sortedContacts;
+          renderSidebar(sortedContacts, threads);
+        };
       } catch(e) {}
     }
 
@@ -2034,12 +2193,13 @@
         else if (snippet.length > 28) snippet = snippet.substring(0, 28) + "...";
 
         const timeStr = new Date(lastMsg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const unreadCount = unreadCounts[id] || 0;
-        const isOnline = userPresenceCache[id] === "online";
+        const normId = normalizeUserId(id);
+        const unreadCount = Math.max(unreadCounts[id] || 0, normId ? (unreadCounts[normId] || 0) : 0);
+        const isOnline = userPresenceCache[id] === "online" || (normId && userPresenceCache[normId] === "online");
 
         const item = document.createElement("div");
-        item.className = `contact-item ${activeChatId === id ? 'active' : ''}`;
-        item.onclick = () => selectContact(id);
+        item.className = `contact-item ${isSameUser(activeChatId, id) ? 'active' : ''}`;
+        item.onclick = () => selectContact(lastMsg.chatWith || id);
 
         item.innerHTML = `
           <div class="c-avatar-wrap">
@@ -2180,6 +2340,8 @@
       try {
         activeChatId = target.toLowerCase().trim();
         unreadCounts[activeChatId] = 0;
+        const normTarget = normalizeUserId(activeChatId);
+        if (normTarget) unreadCounts[normTarget] = 0;
         refreshSidebarContacts();
 
         document.body.classList.add("in-chat");
@@ -2250,13 +2412,17 @@
 
     async function clearActiveChatHistory() {
       if (!activeChatId || !confirm("Clear messages in this conversation?")) return;
-      if (!db) return;
-      const tx = db.transaction("messages", "readwrite");
+      const database = await getDB();
+      if (!database) return;
+      const tx = database.transaction("messages", "readwrite");
       const store = tx.objectStore("messages");
-      const index = store.index("chatWith");
-      const req = index.getAllKeys(activeChatId);
+      const req = store.getAll();
       req.onsuccess = () => {
-        (req.result || []).forEach(k => store.delete(k));
+        (req.result || []).forEach(m => {
+          if (isSameUser(m.chatWith, activeChatId)) {
+            store.delete(m.id);
+          }
+        });
         tx.oncomplete = () => {
           document.getElementById("messages-viewport").innerHTML = "";
           refreshSidebarContacts();
@@ -2284,15 +2450,20 @@
       const box = document.getElementById("messages-viewport");
       box.innerHTML = "";
 
-      const tx = database.transaction("messages", "readonly");
-      const index = tx.objectStore("messages").index("chatWith");
-      const req = index.getAll(activeChatId);
+      try {
+        const tx = database.transaction("messages", "readonly");
+        const store = tx.objectStore("messages");
+        const req = store.getAll();
 
-      req.onsuccess = () => {
-        const msgs = req.result || [];
-        msgs.sort((a, b) => a.timestamp - b.timestamp);
-        msgs.forEach(m => displayMessage(m.content, m.direction, m.id, m.mediaType, m.timestamp, m.status));
-      };
+        req.onsuccess = () => {
+          const allMsgs = req.result || [];
+          const msgs = allMsgs.filter(m => isSameUser(m.chatWith, activeChatId));
+          msgs.sort((a, b) => a.timestamp - b.timestamp);
+          msgs.forEach(m => displayMessage(m.content, m.direction, m.id, m.mediaType, m.timestamp, m.status));
+        };
+      } catch(e) {
+        console.warn("loadChatHistory error:", e);
+      }
     }
 
     // WEBSOCKET
@@ -2306,6 +2477,7 @@
 
         ws.onopen = () => {
           console.log("WebSocket connected as", myId);
+          startWebSocketHeartbeat();
           flushPendingOutbox();
           // Explicitly pull any pending messages sent while app was closed
           try {
@@ -2316,6 +2488,10 @@
         ws.onmessage = async (event) => {
           try {
             const env = JSON.parse(event.data);
+
+            if (env.type === "heartbeat_ack") {
+              return;
+            }
 
             if (env.type === "app_version") {
               if (env.payload && env.payload.version) {
@@ -2346,7 +2522,7 @@
             if (env.type === "profile_update") {
               profileCache[env.from] = env.payload;
               refreshSidebarContacts();
-              if (env.from === activeChatId) {
+              if (isSameUser(env.from, activeChatId)) {
                 document.getElementById("header-user-name").innerText = env.payload.displayName || env.from;
                 if (env.payload.avatarUrl) document.getElementById("header-contact-avatar").src = env.payload.avatarUrl;
               }
@@ -2358,7 +2534,7 @@
               if (payload && payload.status) {
                 userPresenceCache[env.from] = payload.status;
                 refreshSidebarContacts();
-                if (env.from === activeChatId) {
+                if (isSameUser(env.from, activeChatId)) {
                   const statusEl = document.getElementById("header-user-status");
                   statusEl.innerText = payload.status;
                   if (payload.status === "online") statusEl.classList.add("online");
@@ -2390,7 +2566,9 @@
             } else if (env.type === "media") {
               await processInboundMediaMessage(env);
             }
-          } catch (e) {}
+          } catch (e) {
+            console.error("Error processing inbound message:", e, event.data);
+          }
         };
 
         ws.onerror = (err) => {
@@ -2410,23 +2588,35 @@
     }
 
     async function processInboundChatMessage(env) {
-      await ensureCryptoReady();
-      await getDB();
-
+      if (!env || !env.from) return;
       const senderId = env.from.toLowerCase().trim();
-      let text = (env.payload && env.payload.text) ? env.payload.text : "";
+      const safeMsgId = env.id || ("msg-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5));
+
+      // 1. Process public key if peer attached it
+      if (env.payload && env.payload.senderJwk) {
+        try {
+          await deriveSharedKey(env.payload.senderJwk, senderId);
+        } catch (e) {
+          console.warn("deriveSharedKey error:", e);
+        }
+      }
+
+      // 2. Extract message text
+      let text = "";
+      if (typeof env.payload === "string") {
+        text = env.payload;
+      } else if (env.payload && env.payload.text) {
+        text = env.payload.text;
+      }
 
       if (env.payload && env.payload.ciphertext) {
         try {
-          if (env.payload.senderJwk) {
-            await deriveSharedKey(env.payload.senderJwk, senderId);
-          } else if (!sharedKeys[senderId]) {
+          if (!sharedKeys[senderId]) {
             const cached = await getPeerPublicKey(senderId);
             if (cached) {
               await deriveSharedKey(cached, senderId);
             }
           }
-
           if (sharedKeys[senderId]) {
             text = await decryptPayload(senderId, env.payload.ciphertext, env.payload.iv);
           }
@@ -2435,7 +2625,7 @@
         }
 
         if (!text) {
-          text = env.payload.text || "🔐 [Encrypted Message]";
+          text = (env.payload && env.payload.text) ? env.payload.text : "🔐 [Encrypted Message]";
         }
       }
 
@@ -2443,23 +2633,29 @@
 
       playMessageChime();
 
-      await saveMessageToLocal({
-        id: env.id,
-        chatWith: senderId,
-        from: senderId,
-        content: text,
-        direction: "received",
-        mediaType: null,
-        timestamp: env.timestamp || Date.now()
-      });
+      // 3. Save message to local database (non-blocking)
+      try {
+        saveMessageToLocal({
+          id: safeMsgId,
+          chatWith: senderId,
+          from: senderId,
+          content: text,
+          direction: "received",
+          mediaType: null,
+          timestamp: env.timestamp || Date.now()
+        });
+      } catch (e) {
+        console.warn("saveMessageToLocal warning:", e);
+      }
 
-      const isVisibleInActiveChat = (senderId === activeChatId) && !document.hidden;
+      // 4. Check if currently viewing conversation with this sender
+      const isVisibleInActiveChat = isSameUser(senderId, activeChatId) && !document.hidden;
 
       if (isVisibleInActiveChat) {
-        displayMessage(text, "received", env.id, null, env.timestamp);
+        displayMessage(text, "received", safeMsgId, null, env.timestamp);
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
-            id: env.id,
+            id: safeMsgId,
             from: myId,
             to: senderId,
             type: "read_receipt",
@@ -2467,29 +2663,44 @@
           }));
         }
       } else {
-        if (senderId === activeChatId) {
-          displayMessage(text, "received", env.id, null, env.timestamp);
+        if (isSameUser(senderId, activeChatId)) {
+          displayMessage(text, "received", safeMsgId, null, env.timestamp);
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              id: safeMsgId,
+              from: myId,
+              to: senderId,
+              type: "read_receipt",
+              timestamp: Date.now()
+            }));
+          }
         } else {
           unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
+          const normKey = normalizeUserId(senderId);
+          if (normKey && normKey !== senderId) {
+            unreadCounts[normKey] = (unreadCounts[normKey] || 0) + 1;
+          }
           refreshSidebarContacts();
-        }
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            id: env.id,
-            from: myId,
-            to: senderId,
-            type: "delivery_receipt",
-            timestamp: Date.now()
-          }));
+          showInAppNotificationBanner(senderId, text);
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              id: safeMsgId,
+              from: myId,
+              to: senderId,
+              type: "delivery_receipt",
+              timestamp: Date.now()
+            }));
+          }
         }
         triggerDeviceNotification(senderId, text);
       }
     }
 
     async function processInboundMediaMessage(env) {
-      await getDB();
-
+      if (!env || !env.from) return;
       const senderId = env.from.toLowerCase().trim();
+      const safeMsgId = env.id || ("media-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5));
+
       let mediaUrl = env.payload.url;
       if (mediaUrl && mediaUrl.startsWith("/")) {
         mediaUrl = BACKEND_BASE + mediaUrl;
@@ -2497,23 +2708,27 @@
 
       playMessageChime();
 
-      await saveMessageToLocal({
-        id: env.id,
-        chatWith: senderId,
-        from: senderId,
-        content: mediaUrl,
-        direction: "received",
-        mediaType: env.payload.mediaType,
-        timestamp: env.timestamp || Date.now()
-      });
+      try {
+        saveMessageToLocal({
+          id: safeMsgId,
+          chatWith: senderId,
+          from: senderId,
+          content: mediaUrl,
+          direction: "received",
+          mediaType: env.payload.mediaType,
+          timestamp: env.timestamp || Date.now()
+        });
+      } catch(e) {
+        console.warn("saveMessageToLocal warning:", e);
+      }
 
-      const isVisibleInActiveChat = (senderId === activeChatId) && !document.hidden;
+      const isVisibleInActiveChat = isSameUser(senderId, activeChatId) && !document.hidden;
 
       if (isVisibleInActiveChat) {
-        displayMessage(mediaUrl, "received", env.id, env.payload.mediaType, env.timestamp);
+        displayMessage(mediaUrl, "received", safeMsgId, env.payload.mediaType, env.timestamp);
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
-            id: env.id,
+            id: safeMsgId,
             from: myId,
             to: senderId,
             type: "read_receipt",
@@ -2521,20 +2736,34 @@
           }));
         }
       } else {
-        if (senderId === activeChatId) {
-          displayMessage(mediaUrl, "received", env.id, env.payload.mediaType, env.timestamp);
+        if (isSameUser(senderId, activeChatId)) {
+          displayMessage(mediaUrl, "received", safeMsgId, env.payload.mediaType, env.timestamp);
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              id: safeMsgId,
+              from: myId,
+              to: senderId,
+              type: "read_receipt",
+              timestamp: Date.now()
+            }));
+          }
         } else {
           unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
+          const normKey = normalizeUserId(senderId);
+          if (normKey && normKey !== senderId) {
+            unreadCounts[normKey] = (unreadCounts[normKey] || 0) + 1;
+          }
           refreshSidebarContacts();
-        }
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            id: env.id,
-            from: myId,
-            to: senderId,
-            type: "delivery_receipt",
-            timestamp: Date.now()
-          }));
+          showInAppNotificationBanner(senderId, "📷 Media");
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              id: safeMsgId,
+              from: myId,
+              to: senderId,
+              type: "delivery_receipt",
+              timestamp: Date.now()
+            }));
+          }
         }
         const mediaLabel = env.payload.mediaType === "audio" ? "Voice note" : (env.payload.mediaType === "video" ? "Video" : "Photo");
         triggerDeviceNotification(senderId, mediaLabel);
