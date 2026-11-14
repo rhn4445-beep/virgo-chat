@@ -40,7 +40,7 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = "v2.5.5"
+var serverBuildTime = "v2.6.0"
 
 func normalizeUserID(raw string) string {
 	s := strings.ToLower(strings.TrimSpace(raw))
@@ -95,13 +95,14 @@ func (h *Hub) findClient(target string) *Client {
 }
 
 type Hub struct {
-	clients    map[string]*Client
-	groups     map[string]map[string]bool
-	broadcast  chan []byte
-	register   chan *Client
-	unregister chan *Client
-	mutex      sync.Mutex
-	db         *sql.DB
+	clients     map[string]*Client
+	groups      map[string]map[string]bool
+	broadcast   chan []byte
+	register    chan *Client
+	unregister  chan *Client
+	pollWaiters map[string]map[chan []byte]bool
+	mutex       sync.Mutex
+	db          *sql.DB
 }
 
 var upgrader = websocket.Upgrader{
@@ -324,12 +325,13 @@ func handleProfile(db *sql.DB, hub *Hub) http.HandlerFunc {
 
 func newHub(db *sql.DB) *Hub {
 	return &Hub{
-		clients:    make(map[string]*Client),
-		groups:     make(map[string]map[string]bool),
-		broadcast:  make(chan []byte, 1024),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		db:         db,
+		clients:     make(map[string]*Client),
+		groups:      make(map[string]map[string]bool),
+		broadcast:   make(chan []byte, 1024),
+		register:    make(chan *Client),
+		unregister:  make(chan *Client),
+		pollWaiters: make(map[string]map[chan []byte]bool),
+		db:          db,
 	}
 }
 
@@ -469,8 +471,34 @@ func (h *Hub) run() {
 						h.storePendingMessage(env.ID, sender, target, message)
 					}
 				} else {
-					log.Printf("⚠️ Recipient '%s' offline. Storing pending message from %s", target, sender)
+					log.Printf("⚠️ Recipient '%s' offline on WS. Storing pending message from %s", target, sender)
 					h.storePendingMessage(env.ID, sender, target, message)
+
+					// Real-time wakeup for Android background notification pollers
+					if waiters, hasWaiters := h.pollWaiters[target]; hasWaiters && len(waiters) > 0 {
+						log.Printf("🚀 Waking up %d Android background pollers for %s", len(waiters), target)
+						for ch := range waiters {
+							select {
+							case ch <- message:
+							default:
+							}
+						}
+						if (env.Type == "chat" || env.Type == "media") && env.ID != "" {
+							if senderClient := h.findClient(sender); senderClient != nil {
+								delivAck, _ := json.Marshal(Envelope{
+									ID:        env.ID,
+									From:      target,
+									To:        sender,
+									Type:      "delivery_receipt",
+									Timestamp: time.Now().UnixMilli(),
+								})
+								select {
+								case senderClient.Send <- delivAck:
+								default:
+								}
+							}
+						}
+					}
 				}
 			}
 			h.mutex.Unlock()
@@ -793,6 +821,128 @@ func initDatabase() (*sql.DB, error) {
 	return db, nil
 }
 
+func (h *Hub) handleNotificationPoll(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	userId := normalizeUserID(r.URL.Query().Get("userId"))
+	if userId == "" {
+		http.Error(w, "missing userId", http.StatusBadRequest)
+		return
+	}
+
+	// 1. Check if there are unread / pending messages in SQLite
+	h.mutex.Lock()
+	rows, err := h.db.Query(`SELECT id, sender_id, payload, timestamp FROM pending_messages WHERE recipient_id = ? OR recipient_id = ? OR recipient_id = ? ORDER BY timestamp ASC;`, userId, "91"+userId, "+91"+userId)
+	var pendingItems []map[string]interface{}
+	var deliveredIDs []string
+	if err == nil {
+		for rows.Next() {
+			var msgID, senderID, rawPayload string
+			var ts int64
+			rows.Scan(&msgID, &senderID, &rawPayload, &ts)
+
+			var env Envelope
+			if json.Unmarshal([]byte(rawPayload), &env) == nil {
+				text := "New message"
+				var payloadMap map[string]interface{}
+				if json.Unmarshal(env.Payload, &payloadMap) == nil {
+					if t, ok := payloadMap["text"].(string); ok && t != "" {
+						text = t
+					} else if ct, ok := payloadMap["ciphertext"].(string); ok && ct != "" {
+						text = "🔐 Encrypted Message"
+					} else if mType, ok := payloadMap["mediaType"].(string); ok && mType != "" {
+						text = "📷 " + mType
+					}
+				}
+				pendingItems = append(pendingItems, map[string]interface{}{
+					"id":        msgID,
+					"from":      senderID,
+					"text":      text,
+					"timestamp": ts,
+				})
+				deliveredIDs = append(deliveredIDs, msgID)
+			}
+		}
+		rows.Close()
+	}
+
+	if len(pendingItems) > 0 {
+		for _, id := range deliveredIDs {
+			h.db.Exec(`DELETE FROM pending_messages WHERE id = ?;`, id)
+		}
+		h.mutex.Unlock()
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"messages": pendingItems,
+		})
+		return
+	}
+
+	// 2. Wait up to 25 seconds for an incoming real-time message
+	notifyChan := make(chan []byte, 5)
+	if h.pollWaiters[userId] == nil {
+		h.pollWaiters[userId] = make(map[chan []byte]bool)
+	}
+	h.pollWaiters[userId][notifyChan] = true
+	h.mutex.Unlock()
+
+	defer func() {
+		h.mutex.Lock()
+		if m, ok := h.pollWaiters[userId]; ok {
+			delete(m, notifyChan)
+			if len(m) == 0 {
+				delete(h.pollWaiters, userId)
+			}
+		}
+		h.mutex.Unlock()
+	}()
+
+	select {
+	case msgData := <-notifyChan:
+		var env Envelope
+		text := "New message"
+		if json.Unmarshal(msgData, &env) == nil {
+			var payloadMap map[string]interface{}
+			if json.Unmarshal(env.Payload, &payloadMap) == nil {
+				if t, ok := payloadMap["text"].(string); ok && t != "" {
+					text = t
+				} else if ct, ok := payloadMap["ciphertext"].(string); ok && ct != "" {
+					text = "🔐 Encrypted Message"
+				} else if mType, ok := payloadMap["mediaType"].(string); ok && mType != "" {
+					text = "📷 " + mType
+				}
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"messages": []map[string]interface{}{
+					{
+						"id":        env.ID,
+						"from":      env.From,
+						"text":      text,
+						"timestamp": env.Timestamp,
+					},
+				},
+			})
+			return
+		}
+	case <-time.After(25 * time.Second):
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"messages": []interface{}{},
+		})
+		return
+	case <-r.Context().Done():
+		return
+	}
+}
+
 func main() {
 	db, err := initDatabase()
 	if err != nil {
@@ -852,6 +1002,8 @@ func main() {
 		log.Printf("📲 Saved push subscription for %s", target)
 		w.WriteHeader(http.StatusOK)
 	})
+
+	http.HandleFunc("/api/notifications/poll", hub.handleNotificationPoll)
 
 	uploadsHandler := http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads")))
 	http.HandleFunc("/uploads/", func(w http.ResponseWriter, r *http.Request) {

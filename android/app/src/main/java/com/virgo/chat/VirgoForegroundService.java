@@ -7,29 +7,51 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
+import android.graphics.BitmapFactory;
+import android.media.AudioAttributes;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.Log;
 import androidx.core.app.NotificationCompat;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 
 public class VirgoForegroundService extends Service {
     private static final String TAG = "VirgoService";
-    private static final String CHANNEL_ID = "virgo_background_channel";
-    private static final int NOTIFICATION_ID = 2001;
+    private static final String SERVICE_CHANNEL_ID = "virgo_background_channel";
+    private static final String MSG_CHANNEL_ID = "virgo_chat_messages";
+    private static final int SERVICE_NOTIFICATION_ID = 2001;
+
+    public static volatile boolean isActivityInForeground = false;
+    private static volatile boolean isPollingRunning = false;
 
     private PowerManager.WakeLock wakeLock;
     private WifiManager.WifiLock wifiLock;
+    private Thread pollingThread;
 
     @Override
     public void onCreate() {
         super.onCreate();
         Log.d(TAG, "VirgoForegroundService onCreate");
         createServiceNotificationChannel();
+        createMessageNotificationChannel();
         startForegroundServiceWithNotification();
         acquireLocks();
+        startPollingLoop();
     }
 
     private void createServiceNotificationChannel() {
@@ -37,8 +59,8 @@ public class VirgoForegroundService extends Service {
             try {
                 CharSequence name = "Virgo Background Service";
                 String description = "Keeps Virgo connected for real-time messages and notifications";
-                int importance = NotificationManager.IMPORTANCE_LOW; // Silent, unobtrusive
-                NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+                int importance = NotificationManager.IMPORTANCE_LOW; // Silent ongoing service
+                NotificationChannel channel = new NotificationChannel(SERVICE_CHANNEL_ID, name, importance);
                 channel.setDescription(description);
                 channel.setShowBadge(false);
                 channel.setSound(null, null);
@@ -49,6 +71,38 @@ public class VirgoForegroundService extends Service {
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error creating service channel: " + e.getMessage());
+            }
+        }
+    }
+
+    private void createMessageNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                CharSequence name = "Virgo Messages";
+                String description = "High-priority notifications for incoming Virgo chat messages";
+                int importance = NotificationManager.IMPORTANCE_HIGH;
+                NotificationChannel channel = new NotificationChannel(MSG_CHANNEL_ID, name, importance);
+                channel.setDescription(description);
+                channel.enableVibration(true);
+                channel.setVibrationPattern(new long[]{0, 250, 150, 250});
+                channel.enableLights(true);
+                channel.setLightColor(0xFFF5C542); // Golden accent
+                channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+                channel.setBypassDnd(true);
+
+                AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_COMMUNICATION_INSTANT)
+                    .build();
+                Uri defaultSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+                channel.setSound(defaultSound, audioAttributes);
+
+                NotificationManager manager = getSystemService(NotificationManager.class);
+                if (manager != null) {
+                    manager.createNotificationChannel(channel);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error creating msg channel: " + e.getMessage());
             }
         }
     }
@@ -64,7 +118,7 @@ public class VirgoForegroundService extends Service {
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
             );
 
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, SERVICE_CHANNEL_ID)
                 .setContentTitle("Virgo Messenger")
                 .setContentText("Connected & listening for messages")
                 .setSmallIcon(R.drawable.ic_stat_virgo)
@@ -75,13 +129,13 @@ public class VirgoForegroundService extends Service {
             Notification notification = builder.build();
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+                startForeground(SERVICE_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
             } else {
-                startForeground(NOTIFICATION_ID, notification);
+                startForeground(SERVICE_NOTIFICATION_ID, notification);
             }
-            Log.d(TAG, "VirgoForegroundService started in foreground");
+            Log.d(TAG, "VirgoForegroundService running in foreground");
         } catch (Exception e) {
-            Log.e(TAG, "Failed to start foreground service: " + e.getMessage(), e);
+            Log.e(TAG, "Failed starting foreground service: " + e.getMessage(), e);
         }
     }
 
@@ -98,21 +152,166 @@ public class VirgoForegroundService extends Service {
                 wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "Virgo:WifiLock");
                 wifiLock.acquire();
             }
-            Log.d(TAG, "WakeLock & WifiLock acquired");
+            Log.d(TAG, "WakeLock & WifiLock active");
         } catch (Exception e) {
             Log.e(TAG, "Error acquiring locks: " + e.getMessage());
+        }
+    }
+
+    private synchronized void startPollingLoop() {
+        if (isPollingRunning && pollingThread != null && pollingThread.isAlive()) {
+            return;
+        }
+
+        isPollingRunning = true;
+        pollingThread = new Thread(() -> {
+            Log.d(TAG, "🚀 Virgo Native Background Poller thread started");
+            while (isPollingRunning) {
+                try {
+                    SharedPreferences prefs = getSharedPreferences("virgo_prefs", Context.MODE_PRIVATE);
+                    String userId = prefs.getString("active_user_id", "");
+                    if (userId == null || userId.trim().isEmpty()) {
+                        Thread.sleep(2000);
+                        continue;
+                    }
+
+                    acquireLocks();
+
+                    String targetUrl = "https://virgo-chat.onrender.com/api/notifications/poll?userId=" + URLEncoder.encode(userId.trim(), "UTF-8");
+                    URL url = new URL(targetUrl);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("GET");
+                    conn.setConnectTimeout(10000);
+                    conn.setReadTimeout(30000); // 30s timeout matching 25s server hold
+                    conn.setRequestProperty("User-Agent", "VirgoNativeClient/2.6.0");
+
+                    int code = conn.getResponseCode();
+                    if (code == 200) {
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            sb.append(line);
+                        }
+                        reader.close();
+
+                        handlePollPayload(sb.toString());
+                    } else {
+                        Thread.sleep(3000);
+                    }
+                } catch (Exception e) {
+                    // Log and sleep briefly before retry
+                    try {
+                        Thread.sleep(2500);
+                    } catch (Exception ignored) {}
+                }
+            }
+            Log.d(TAG, "Virgo Native Background Poller thread ended");
+        }, "VirgoNotificationPoller");
+        pollingThread.start();
+    }
+
+    private void handlePollPayload(String jsonStr) {
+        if (jsonStr == null || jsonStr.trim().isEmpty()) return;
+        try {
+            JSONObject root = new JSONObject(jsonStr);
+            JSONArray msgs = root.optJSONArray("messages");
+            if (msgs != null && msgs.length() > 0) {
+                for (int i = 0; i < msgs.length(); i++) {
+                    JSONObject m = msgs.getJSONObject(i);
+                    String from = m.optString("from", "Virgo Contact");
+                    String text = m.optString("text", "New message");
+
+                    Log.d(TAG, "📩 Native Poller received message from " + from + ": " + text);
+
+                    // If app is not in the active foreground, trigger native heads-up notification!
+                    if (!isActivityInForeground) {
+                        postMessageNotification(from, text);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error handling poll payload: " + e.getMessage());
+        }
+    }
+
+    public void postMessageNotification(String sender, String message) {
+        try {
+            createMessageNotificationChannel();
+
+            Intent intent = new Intent(this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                this,
+                (int) System.currentTimeMillis(),
+                intent,
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
+            );
+
+            // Physical device vibration
+            try {
+                Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                if (vibrator != null && vibrator.hasVibrator()) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        vibrator.vibrate(VibrationEffect.createWaveform(new long[]{0, 250, 150, 250}, -1));
+                    } else {
+                        vibrator.vibrate(new long[]{0, 250, 150, 250}, -1);
+                    }
+                }
+            } catch (Exception ignored) {}
+
+            // Sound chime
+            try {
+                Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+                Ringtone ringtone = RingtoneManager.getRingtone(getApplicationContext(), soundUri);
+                if (ringtone != null) ringtone.play();
+            } catch (Exception ignored) {}
+
+            Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, MSG_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_virgo)
+                .setContentTitle(sender)
+                .setContentText(message)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setSound(soundUri)
+                .setVibrate(new long[]{0, 250, 150, 250})
+                .setColor(0xFFF5C542)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent);
+
+            try {
+                builder.setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
+            } catch (Throwable ignored) {}
+
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notificationManager != null) {
+                int notifId = (int) (System.currentTimeMillis() % 100000000);
+                notificationManager.notify(notifId, builder.build());
+                Log.d(TAG, "✅ Native message notification posted: id=" + notifId + " from=" + sender);
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Fatal error displaying native notification: " + t.getMessage(), t);
         }
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         acquireLocks();
+        startPollingLoop();
         return START_STICKY;
     }
 
     @Override
     public void onDestroy() {
+        isPollingRunning = false;
         try {
+            if (pollingThread != null) {
+                pollingThread.interrupt();
+            }
             if (wakeLock != null && wakeLock.isHeld()) {
                 wakeLock.release();
             }
@@ -120,7 +319,7 @@ public class VirgoForegroundService extends Service {
                 wifiLock.release();
             }
         } catch (Exception ignored) {}
-        Log.d(TAG, "VirgoForegroundService destroyed");
+        Log.d(TAG, "VirgoForegroundService onDestroy");
         super.onDestroy();
     }
 

@@ -48,6 +48,7 @@ public class MainActivity extends BridgeActivity {
     public void onResume() {
         super.onResume();
         isAppInForeground = true;
+        VirgoForegroundService.isActivityInForeground = true;
         setupWebViewAndBridge();
         requestNotificationPermission();
         startVirgoBackgroundService();
@@ -63,6 +64,7 @@ public class MainActivity extends BridgeActivity {
     public void onPause() {
         super.onPause();
         isAppInForeground = false;
+        VirgoForegroundService.isActivityInForeground = false;
         try {
             if (this.bridge != null && this.bridge.getWebView() != null) {
                 this.bridge.getWebView().resumeTimers();
@@ -116,6 +118,18 @@ public class MainActivity extends BridgeActivity {
                                 return nm.areNotificationsEnabled();
                             }
                             return true;
+                        }
+
+                        @JavascriptInterface
+                        public void setUserId(String userId) {
+                            if (userId != null && !userId.trim().isEmpty()) {
+                                getSharedPreferences("virgo_prefs", Context.MODE_PRIVATE)
+                                    .edit()
+                                    .putString("active_user_id", userId.trim().toLowerCase())
+                                    .apply();
+                                Log.d(TAG, "Saved active_user_id for background service: " + userId);
+                                startVirgoBackgroundService();
+                            }
                         }
 
                         @JavascriptInterface
