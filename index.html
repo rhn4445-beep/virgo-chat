@@ -1335,7 +1335,7 @@
     const isLocalDev = !isCapacitor && window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (window.location.port !== "");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = "v2.5.0";
+    let activeClientVersion = "v2.5.1";
     let updateBannerDismissed = false;
 
     function handleIncomingAppVersion(newVersion) {

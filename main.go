@@ -40,7 +40,7 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = "v2.5.0"
+var serverBuildTime = "v2.5.1"
 
 func normalizeUserID(raw string) string {
 	s := strings.ToLower(strings.TrimSpace(raw))
@@ -334,14 +334,19 @@ func newHub(db *sql.DB) *Hub {
 }
 
 func (h *Hub) run() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("🔥 Recovered Hub panic: %v", r)
+			go h.run()
+		}
+	}()
+
 	for {
 		select {
 		case client := <-h.register:
 			h.mutex.Lock()
-			if oldClient, exists := h.clients[client.ID]; exists {
-				close(oldClient.Send)
+			if oldClient, exists := h.clients[client.ID]; exists && oldClient != client {
 				oldClient.Conn.Close()
-				delete(h.clients, client.ID)
 			}
 			h.clients[client.ID] = client
 
@@ -368,9 +373,8 @@ func (h *Hub) run() {
 
 		case client := <-h.unregister:
 			h.mutex.Lock()
-			if _, ok := h.clients[client.ID]; ok {
+			if existing, ok := h.clients[client.ID]; ok && existing == client {
 				delete(h.clients, client.ID)
-				close(client.Send)
 			}
 			for _, members := range h.groups {
 				delete(members, client.ID)
@@ -464,8 +468,8 @@ func (h *Hub) storePendingMessage(msgID, from, to string, raw []byte) {
 	if msgID == "" {
 		msgID = fmt.Sprintf("pending-%d", time.Now().UnixNano())
 	}
-	cleanFrom := strings.ToLower(strings.TrimSpace(from))
-	cleanTo := strings.ToLower(strings.TrimSpace(to))
+	cleanFrom := normalizeUserID(from)
+	cleanTo := normalizeUserID(to)
 	query := `INSERT OR REPLACE INTO pending_messages (id, sender_id, recipient_id, payload, timestamp) VALUES (?, ?, ?, ?, ?);`
 	_, err := h.db.Exec(query, msgID, cleanFrom, cleanTo, string(raw), time.Now().UnixMilli())
 	if err != nil {
@@ -514,56 +518,70 @@ func (h *Hub) deliverPendingMessages(c *Client) {
 	}
 	time.Sleep(300 * time.Millisecond)
 
-	h.mutex.Lock()
-	defer h.mutex.Unlock()
-
 	normID := normalizeUserID(c.ID)
 	query := `SELECT id, payload FROM pending_messages WHERE recipient_id = ? OR recipient_id = ? OR recipient_id = ? OR recipient_id = ? ORDER BY timestamp ASC;`
+
+	type pendingMsg struct {
+		id      string
+		payload string
+	}
+	var items []pendingMsg
+
+	h.mutex.Lock()
 	rows, err := h.db.Query(query, c.ID, normID, "+91"+normID, "91"+normID)
 	if err != nil {
+		h.mutex.Unlock()
 		log.Printf("Query error fetching offline messages: %v", err)
 		return
 	}
-	defer rows.Close()
+	for rows.Next() {
+		var it pendingMsg
+		if err := rows.Scan(&it.id, &it.payload); err == nil {
+			items = append(items, it)
+		}
+	}
+	rows.Close()
+	h.mutex.Unlock()
+
+	if len(items) == 0 {
+		return
+	}
 
 	var deliveredIDs []string
-	for rows.Next() {
-		var id, payload string
-		if err := rows.Scan(&id, &payload); err == nil {
-			select {
-			case c.Send <- []byte(payload):
-				deliveredIDs = append(deliveredIDs, id)
-			default:
-			}
+	for _, it := range items {
+		select {
+		case c.Send <- []byte(it.payload):
+			deliveredIDs = append(deliveredIDs, it.id)
+		default:
+		}
 
-			var env Envelope
-			if err := json.Unmarshal([]byte(payload), &env); err == nil && env.From != "" {
-				if (env.Type == "chat" || env.Type == "media") && env.ID != "" {
-					senderTarget := normalizeUserID(env.From)
-					delivAck, _ := json.Marshal(Envelope{
-						ID:        env.ID,
-						From:      c.ID,
-						To:        env.From,
-						Type:      "delivery_receipt",
-						Timestamp: time.Now().UnixMilli(),
-					})
-					if senderClient := h.findClient(senderTarget); senderClient != nil {
-						select {
-						case senderClient.Send <- delivAck:
-						default:
-						}
-					} else {
-						// Store delivery receipt for sender when sender connects later
-						delivMsgID := fmt.Sprintf("ack-%s", env.ID)
-						h.db.Exec(`INSERT OR REPLACE INTO pending_messages (id, sender_id, recipient_id, payload, timestamp) VALUES (?, ?, ?, ?, ?);`,
-							delivMsgID, c.ID, senderTarget, string(delivAck), time.Now().UnixMilli())
+		var env Envelope
+		if err := json.Unmarshal([]byte(it.payload), &env); err == nil && env.From != "" {
+			if (env.Type == "chat" || env.Type == "media") && env.ID != "" {
+				senderTarget := normalizeUserID(env.From)
+				delivAck, _ := json.Marshal(Envelope{
+					ID:        env.ID,
+					From:      c.ID,
+					To:        env.From,
+					Type:      "delivery_receipt",
+					Timestamp: time.Now().UnixMilli(),
+				})
+				h.mutex.Lock()
+				senderClient := h.findClient(senderTarget)
+				h.mutex.Unlock()
+
+				if senderClient != nil {
+					select {
+					case senderClient.Send <- delivAck:
+					default:
 					}
+				} else {
+					delivMsgID := fmt.Sprintf("ack-%s", env.ID)
+					h.db.Exec(`INSERT OR REPLACE INTO pending_messages (id, sender_id, recipient_id, payload, timestamp) VALUES (?, ?, ?, ?, ?);`,
+						delivMsgID, c.ID, senderTarget, string(delivAck), time.Now().UnixMilli())
 				}
 			}
 		}
-	}
-	if err := rows.Err(); err != nil {
-		log.Printf("Row iteration error: %v", err)
 	}
 
 	for _, id := range deliveredIDs {
