@@ -12,6 +12,7 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.Log;
@@ -25,6 +26,7 @@ public class MainActivity extends BridgeActivity {
     private static final String TAG = "VirgoNative";
     private static final String CHANNEL_ID = "virgo_chat_messages";
     private static final int PERMISSION_REQ_CODE = 101;
+    public static volatile boolean isAppInForeground = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -32,24 +34,55 @@ public class MainActivity extends BridgeActivity {
         createNotificationChannel();
         setupWebViewAndBridge();
         requestNotificationPermission();
+        startVirgoBackgroundService();
     }
 
     @Override
     public void onStart() {
         super.onStart();
         setupWebViewAndBridge();
+        startVirgoBackgroundService();
     }
 
     @Override
     public void onResume() {
         super.onResume();
+        isAppInForeground = true;
         setupWebViewAndBridge();
         requestNotificationPermission();
+        startVirgoBackgroundService();
         try {
             if (this.bridge != null && this.bridge.getWebView() != null) {
                 this.bridge.getWebView().resumeTimers();
+                this.bridge.getWebView().evaluateJavascript("if (window.onVirgoResume) window.onVirgoResume();", null);
             }
         } catch (Exception ignored) {}
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        isAppInForeground = false;
+        try {
+            if (this.bridge != null && this.bridge.getWebView() != null) {
+                this.bridge.getWebView().resumeTimers();
+                this.bridge.getWebView().evaluateJavascript("if (window.onVirgoPause) window.onVirgoPause();", null);
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void startVirgoBackgroundService() {
+        try {
+            Intent serviceIntent = new Intent(this, VirgoForegroundService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+            Log.d(TAG, "VirgoForegroundService started");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed starting VirgoForegroundService: " + e.getMessage());
+        }
     }
 
     private void setupWebViewAndBridge() {
@@ -86,6 +119,24 @@ public class MainActivity extends BridgeActivity {
                         }
 
                         @JavascriptInterface
+                        public boolean isForeground() {
+                            return isAppInForeground;
+                        }
+
+                        @JavascriptInterface
+                        public void downloadAndInstallUpdate(String url) {
+                            runOnUiThread(() -> {
+                                try {
+                                    Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                                    browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    startActivity(browserIntent);
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Failed opening update url: " + e.getMessage());
+                                }
+                            });
+                        }
+
+                        @JavascriptInterface
                         public void vibrate(long ms) {
                             try {
                                 Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
@@ -106,6 +157,22 @@ public class MainActivity extends BridgeActivity {
                                 Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), sound);
                                 if (r != null) r.play();
                             } catch (Exception ignored) {}
+                        }
+
+                        @JavascriptInterface
+                        public void requestBatteryOptimization() {
+                            runOnUiThread(() -> {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                    try {
+                                        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                                        if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                                            Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                                            intent.setData(Uri.parse("package:" + getPackageName()));
+                                            startActivity(intent);
+                                        }
+                                    } catch (Exception ignored) {}
+                                }
+                            });
                         }
                     }, "AndroidNative");
                     Log.d(TAG, "AndroidNative interface successfully attached to WebView");

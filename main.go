@@ -40,7 +40,7 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = "v2.5.4"
+var serverBuildTime = "v2.5.5"
 
 func normalizeUserID(raw string) string {
 	s := strings.ToLower(strings.TrimSpace(raw))
@@ -612,9 +612,9 @@ func (c *Client) readPump(hub *Hub) {
 		c.Conn.Close()
 	}()
 
-	c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	c.Conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 	c.Conn.SetPongHandler(func(string) error {
-		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		c.Conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 		return nil
 	})
 
@@ -629,7 +629,7 @@ func (c *Client) readPump(hub *Hub) {
 			continue
 		}
 
-		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		c.Conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 
 		env.From = c.ID
 		target := normalizeUserID(env.To)
@@ -745,6 +745,7 @@ func (c *Client) writePump() {
 	for {
 		select {
 		case message, ok := <-c.Send:
+			c.Conn.SetWriteDeadline(time.Now().Add(15 * time.Second))
 			if !ok {
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
@@ -753,6 +754,7 @@ func (c *Client) writePump() {
 				return
 			}
 		case <-ticker.C:
+			c.Conn.SetWriteDeadline(time.Now().Add(15 * time.Second))
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
@@ -860,6 +862,12 @@ func main() {
 	fileServer := http.FileServer(http.Dir("."))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if r.URL.Path == "/virgo.apk" || r.URL.Path == "/download/apk" {
+			w.Header().Set("Content-Type", "application/vnd.android.package-archive")
+			w.Header().Set("Content-Disposition", "attachment; filename=\"virgo.apk\"")
+			http.ServeFile(w, r, "virgo.apk")
+			return
+		}
 		if r.URL.Path == "/" || r.URL.Path == "/index.html" || r.URL.Path == "/sw.js" {
 			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 			w.Header().Set("Pragma", "no-cache")
