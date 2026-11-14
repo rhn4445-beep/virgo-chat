@@ -1289,7 +1289,7 @@
     const isLocalDev = window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = "v2.3.0";
+    let activeClientVersion = "v2.4.0";
     let updateBannerDismissed = false;
 
     function handleIncomingAppVersion(newVersion) {
@@ -1473,9 +1473,49 @@
     let recTimerInterval = null;
     let recSeconds = 0;
 
-    // AUDIO CHIME
+    // NOTIFICATION & VIBRATION
+    function triggerDeviceNotification(senderId, snippet) {
+      const title = "Virgo";
+      const cleanSnippet = (snippet || "New message").replace(/<[^>]*>?/gm, '').substring(0, 100);
+      const body = `${senderId}: ${cleanSnippet}`;
+
+      // 1. Native Android bridge (when running in Virgo APK)
+      if (window.AndroidNative && typeof window.AndroidNative.showNotification === "function") {
+        try {
+          window.AndroidNative.showNotification(title, body);
+          return;
+        } catch(e) {}
+      }
+
+      // 2. Service Worker showNotification (supported by all Android browsers and PWAs)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(reg => {
+          if (reg && reg.showNotification) {
+            reg.showNotification(title, {
+              body: body,
+              icon: '/icon.png',
+              badge: '/icon.png',
+              vibrate: [200, 100, 200],
+              data: { url: '/' }
+            });
+          }
+        }).catch(() => {});
+      }
+
+      // 3. Desktop browser fallback
+      if ("Notification" in window && Notification.permission === "granted") {
+        try {
+          new Notification(title, { body: body, icon: "icon.png" });
+        } catch(e) {}
+      }
+    }
+
+    // AUDIO CHIME & VIBRATION
     function playMessageChime() {
       try {
+        if ('vibrate' in navigator) {
+          navigator.vibrate([150, 80, 150]);
+        }
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -2413,7 +2453,9 @@
         timestamp: env.timestamp || Date.now()
       });
 
-      if (senderId === activeChatId) {
+      const isVisibleInActiveChat = (senderId === activeChatId) && !document.hidden;
+
+      if (isVisibleInActiveChat) {
         displayMessage(text, "received", env.id, null, env.timestamp);
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
@@ -2425,6 +2467,12 @@
           }));
         }
       } else {
+        if (senderId === activeChatId) {
+          displayMessage(text, "received", env.id, null, env.timestamp);
+        } else {
+          unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
+          refreshSidebarContacts();
+        }
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
             id: env.id,
@@ -2434,16 +2482,7 @@
             timestamp: Date.now()
           }));
         }
-        unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
-        refreshSidebarContacts();
-        if ("Notification" in window && Notification.permission === "granted") {
-          try {
-            new Notification("Virgo", {
-              body: `New message from ${senderId}`,
-              icon: "icon.png"
-            });
-          } catch(e) {}
-        }
+        triggerDeviceNotification(senderId, text);
       }
     }
 
@@ -2468,7 +2507,9 @@
         timestamp: env.timestamp || Date.now()
       });
 
-      if (senderId === activeChatId) {
+      const isVisibleInActiveChat = (senderId === activeChatId) && !document.hidden;
+
+      if (isVisibleInActiveChat) {
         displayMessage(mediaUrl, "received", env.id, env.payload.mediaType, env.timestamp);
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
@@ -2480,6 +2521,12 @@
           }));
         }
       } else {
+        if (senderId === activeChatId) {
+          displayMessage(mediaUrl, "received", env.id, env.payload.mediaType, env.timestamp);
+        } else {
+          unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
+          refreshSidebarContacts();
+        }
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
             id: env.id,
@@ -2489,16 +2536,8 @@
             timestamp: Date.now()
           }));
         }
-        unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
-        refreshSidebarContacts();
-        if ("Notification" in window && Notification.permission === "granted") {
-          try {
-            new Notification("Virgo", {
-              body: `New message from ${senderId}`,
-              icon: "icon.png"
-            });
-          } catch(e) {}
-        }
+        const mediaLabel = env.payload.mediaType === "audio" ? "Voice note" : (env.payload.mediaType === "video" ? "Video" : "Photo");
+        triggerDeviceNotification(senderId, mediaLabel);
       }
     }
 

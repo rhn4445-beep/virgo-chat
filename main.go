@@ -40,7 +40,7 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = "v2.3.0"
+var serverBuildTime = "v2.4.0"
 
 type Hub struct {
 	clients    map[string]*Client
