@@ -23,6 +23,7 @@ COPY --from=builder /app/index.html .
 COPY --from=builder /app/manifest.json .
 COPY --from=builder /app/sw.js .
 COPY --from=builder /app/icon.png .
+COPY --from=builder /app/virgo.apk .
 
 # Ensure uploads directory exists
 RUN mkdir -p uploads
