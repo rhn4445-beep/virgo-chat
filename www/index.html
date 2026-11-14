@@ -1142,6 +1142,10 @@
           <div id="lbl-profile-id" style="color:var(--text-muted);font-size:14px;padding:8px 0;">guest@virgo</div>
         </div>
 
+        <button type="button" onclick="testDeviceNotification()" style="background:rgba(245,197,66,0.15);border:1px solid var(--virgo-gold);border-radius:12px;color:var(--virgo-gold-bright);padding:10px 16px;font-weight:700;font-size:13px;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px;">
+          <span>🔔</span> Test Notifications (Sound &amp; Vibrate)
+        </button>
+
         <button class="btn-gold-save" onclick="saveProfileChanges()">Save Changes</button>
         <button class="btn-red-logout" onclick="logout()">Log Out</button>
       </div>
@@ -1362,7 +1366,7 @@
     const isLocalDev = !isCapacitor && window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (window.location.port !== "");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = "v2.5.3";
+    let activeClientVersion = "v2.5.4";
     let updateBannerDismissed = false;
 
     function handleIncomingAppVersion(newVersion) {
@@ -1698,14 +1702,26 @@
       const body = `${senderId}: ${cleanSnippet}`;
 
       // 1. Native Android bridge (when running in Virgo APK)
-      if (window.AndroidNative && typeof window.AndroidNative.showNotification === "function") {
+      if (window.AndroidNative) {
         try {
-          window.AndroidNative.showNotification(title, body);
-          return;
-        } catch(e) {}
+          if (typeof window.AndroidNative.showNotification === "function") {
+            window.AndroidNative.showNotification(title, body);
+          }
+          if (typeof window.AndroidNative.vibrate === "function") {
+            window.AndroidNative.vibrate(300);
+          }
+          if (typeof window.AndroidNative.playChime === "function") {
+            window.AndroidNative.playChime();
+          }
+        } catch(e) {
+          console.warn("AndroidNative error:", e);
+        }
       }
 
-      // 2. Service Worker showNotification (supported by all Android browsers and PWAs)
+      // 2. Audio Chime & Vibration
+      playMessageChime();
+
+      // 3. Service Worker showNotification (supported by all Android browsers and PWAs)
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(reg => {
           if (reg && reg.showNotification) {
@@ -1720,7 +1736,7 @@
         }).catch(() => {});
       }
 
-      // 3. Desktop browser fallback
+      // 4. Desktop browser fallback
       if ("Notification" in window && Notification.permission === "granted") {
         try {
           new Notification(title, { body: body, icon: "icon.png" });
@@ -1728,24 +1744,54 @@
       }
     }
 
+    function testDeviceNotification() {
+      triggerDeviceNotification("Virgo Alerts", "🔔 Test notification! Sound and vibration are working properly.");
+      if (window.AndroidNative && typeof window.AndroidNative.requestPermission === "function") {
+        window.AndroidNative.requestPermission();
+      }
+    }
+
     // AUDIO CHIME & VIBRATION
     function playMessageChime() {
+      // Native haptic & chime in Android APK
+      if (window.AndroidNative) {
+        try {
+          if (typeof window.AndroidNative.vibrate === "function") {
+            window.AndroidNative.vibrate(250);
+          }
+          if (typeof window.AndroidNative.playChime === "function") {
+            window.AndroidNative.playChime();
+          }
+        } catch(e) {}
+      }
+
       try {
         if ('vibrate' in navigator) {
           navigator.vibrate([150, 80, 150]);
         }
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.25);
+      } catch (e) {}
+
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          if (ctx.state === "suspended") {
+            ctx.resume().catch(() => {});
+          }
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.12, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          setTimeout(() => {
+            try { osc.stop(); ctx.close(); } catch(e) {}
+          }, 300);
+        }
       } catch (e) {}
     }
 
@@ -3137,13 +3183,19 @@
     }
 
     async function requestNotificationPermissionFromUser() {
+      if (window.AndroidNative && typeof window.AndroidNative.requestPermission === "function") {
+        window.AndroidNative.requestPermission();
+        triggerDeviceNotification("Virgo", "✅ Notifications are now active on your device!");
+        hideNotificationPermissionPrompt();
+        return;
+      }
       if ("Notification" in window) {
         try {
           const perm = await Notification.requestPermission();
           if (perm === "granted") {
             hideNotificationPermissionPrompt();
+            triggerDeviceNotification("Virgo", "✅ Notifications active!");
             await subscribeToPushNotifications();
-            alert("✅ Notifications active! You will receive alerts when messages arrive while the app is closed.");
           }
         } catch(e) {}
       }
