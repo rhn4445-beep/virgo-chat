@@ -543,8 +543,27 @@
     .header-user-meta { display: flex; flex-direction: column; min-width: 0; }
     #header-user-name { font-size: 16px; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .header-status-line { display: flex; align-items: center; gap: 6px; }
-    #header-user-status { font-size: 11.5px; color: var(--text-muted); text-transform: capitalize; }
+    #header-user-status { font-size: 11.5px; color: var(--text-muted); text-transform: capitalize; display: inline-flex; align-items: center; }
     #header-user-status.online { color: var(--color-online); font-weight: 500; }
+    #header-user-status.online::before {
+      content: "";
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      background: var(--color-online);
+      border-radius: 50%;
+      margin-right: 5px;
+      box-shadow: 0 0 6px var(--color-online);
+    }
+    #header-user-status:not(.online)::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.35);
+      border-radius: 50%;
+      margin-right: 5px;
+    }
     .header-e2e-pill {
       font-size: 10px;
       font-weight: 600;
@@ -1335,7 +1354,7 @@
     const isLocalDev = !isCapacitor && window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (window.location.port !== "");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = "v2.5.1";
+    let activeClientVersion = "v2.5.2";
     let updateBannerDismissed = false;
 
     function handleIncomingAppVersion(newVersion) {
@@ -1550,6 +1569,39 @@
       return n1 !== "" && n1 === n2;
     }
 
+    // PEER PRESENCE MANAGER
+    function setPeerPresence(peerId, status) {
+      if (!peerId) return;
+      const raw = String(peerId).toLowerCase().trim();
+      const norm = normalizeUserId(raw);
+      userPresenceCache[raw] = status;
+      if (norm) userPresenceCache[norm] = status;
+
+      refreshSidebarContacts();
+
+      if (isSameUser(raw, activeChatId)) {
+        const statusEl = document.getElementById("header-user-status");
+        if (statusEl) {
+          statusEl.innerText = status;
+          if (status === "online") {
+            statusEl.classList.add("online");
+          } else {
+            statusEl.classList.remove("online");
+          }
+        }
+      }
+    }
+
+    function getPeerPresence(peerId) {
+      if (!peerId) return "offline";
+      const raw = String(peerId).toLowerCase().trim();
+      const norm = normalizeUserId(raw);
+      if (userPresenceCache[raw] === "online" || (norm && userPresenceCache[norm] === "online")) {
+        return "online";
+      }
+      return userPresenceCache[raw] || (norm ? userPresenceCache[norm] : null) || "offline";
+    }
+
     // IN-APP NOTIFICATION BANNER
     let inAppToastTimeout = null;
     let toastSenderTarget = "";
@@ -1599,6 +1651,9 @@
         if (ws && ws.readyState === WebSocket.OPEN) {
           try {
             ws.send(JSON.stringify({ type: "heartbeat", from: myId }));
+            if (activeChatId) {
+              ws.send(JSON.stringify({ type: "query_presence", from: myId, to: activeChatId }));
+            }
           } catch(e) {}
         } else if (myId) {
           connectWebSocket();
@@ -2044,11 +2099,13 @@
           ["encrypt", "decrypt"]
         );
         sharedKeys[target] = derived;
+        const normTarget = normalizeUserId(target);
+        if (normTarget) sharedKeys[normTarget] = derived;
 
         if (pendingCiphertextQueue.length > 0) {
           const remaining = [];
           for (const item of pendingCiphertextQueue) {
-            if (item.from.toLowerCase().trim() === target) {
+            if (isSameUser(item.from, target)) {
               if (item.type === "chat") await processInboundChatMessage(item);
               else if (item.type === "media") await processInboundMediaMessage(item);
             } else {
@@ -2061,7 +2118,9 @@
     }
 
     async function encryptText(peerId, plaintext) {
-      const key = sharedKeys[peerId.toLowerCase().trim()];
+      const raw = (peerId || "").toLowerCase().trim();
+      const norm = normalizeUserId(raw);
+      const key = sharedKeys[raw] || (norm ? sharedKeys[norm] : null);
       if (!key) return null;
       try {
         const iv = window.crypto.getRandomValues(new Uint8Array(12));
@@ -2074,7 +2133,9 @@
     }
 
     async function decryptPayload(peerId, ciphertextB64, ivB64) {
-      const key = sharedKeys[peerId.toLowerCase().trim()];
+      const raw = (peerId || "").toLowerCase().trim();
+      const norm = normalizeUserId(raw);
+      const key = sharedKeys[raw] || (norm ? sharedKeys[norm] : null);
       if (!key) return null;
       try {
         const iv = new Uint8Array(atob(ivB64).split("").map(c => c.charCodeAt(0)));
@@ -2195,7 +2256,7 @@
         const timeStr = new Date(lastMsg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const normId = normalizeUserId(id);
         const unreadCount = Math.max(unreadCounts[id] || 0, normId ? (unreadCounts[normId] || 0) : 0);
-        const isOnline = userPresenceCache[id] === "online" || (normId && userPresenceCache[normId] === "online");
+        const isOnline = getPeerPresence(id) === "online";
 
         const item = document.createElement("div");
         item.className = `contact-item ${isSameUser(activeChatId, id) ? 'active' : ''}`;
@@ -2355,11 +2416,22 @@
         document.getElementById("header-contact-avatar").src = avatarUrl;
         document.getElementById("header-user-name").innerText = displayName;
         
-        const isOnline = userPresenceCache[activeChatId] === "online";
+        const isOnline = getPeerPresence(activeChatId) === "online";
         const statusEl = document.getElementById("header-user-status");
         statusEl.innerText = isOnline ? "online" : "offline";
         if (isOnline) statusEl.classList.add("online");
         else statusEl.classList.remove("online");
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          try {
+            ws.send(JSON.stringify({
+              type: "query_presence",
+              from: myId,
+              to: activeChatId,
+              timestamp: Date.now()
+            }));
+          } catch(e) {}
+        }
 
         const cachedPeerKey = await getPeerPublicKey(activeChatId);
         if (cachedPeerKey && !sharedKeys[activeChatId]) {
@@ -2507,6 +2579,7 @@
 
             if (env.type === "delivery_receipt") {
               updateMessageStatusInDomAndDb(env.id, "delivered");
+              setPeerPresence(env.from, "online");
               return;
             }
 
@@ -2516,6 +2589,7 @@
               } else if (env.id) {
                 updateMessageStatusInDomAndDb(env.id, "read");
               }
+              setPeerPresence(env.from, "online");
               return;
             }
 
@@ -2532,19 +2606,13 @@
             if (env.type === "presence") {
               let payload = typeof env.payload === "string" ? JSON.parse(env.payload) : env.payload;
               if (payload && payload.status) {
-                userPresenceCache[env.from] = payload.status;
-                refreshSidebarContacts();
-                if (isSameUser(env.from, activeChatId)) {
-                  const statusEl = document.getElementById("header-user-status");
-                  statusEl.innerText = payload.status;
-                  if (payload.status === "online") statusEl.classList.add("online");
-                  else statusEl.classList.remove("online");
-                }
+                setPeerPresence(env.from, payload.status);
               }
               return;
             }
 
             if (env.type === "key_exchange" || env.type === "key_exchange_ack") {
+              setPeerPresence(env.from, "online");
               await deriveSharedKey(env.payload.jwk, env.from);
               if (env.type === "key_exchange") {
                 const pubKey = await exportPublicKey();
@@ -2590,6 +2658,7 @@
     async function processInboundChatMessage(env) {
       if (!env || !env.from) return;
       const senderId = env.from.toLowerCase().trim();
+      setPeerPresence(senderId, "online");
       const safeMsgId = env.id || ("msg-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5));
 
       // 1. Process public key if peer attached it
@@ -2699,6 +2768,7 @@
     async function processInboundMediaMessage(env) {
       if (!env || !env.from) return;
       const senderId = env.from.toLowerCase().trim();
+      setPeerPresence(senderId, "online");
       const safeMsgId = env.id || ("media-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5));
 
       let mediaUrl = env.payload.url;

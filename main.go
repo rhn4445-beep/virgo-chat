@@ -40,7 +40,7 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = "v2.5.1"
+var serverBuildTime = "v2.5.2"
 
 func normalizeUserID(raw string) string {
 	s := strings.ToLower(strings.TrimSpace(raw))
@@ -364,6 +364,20 @@ func (h *Hub) run() {
 					case peer.Send <- onlineEnv:
 					default:
 					}
+
+					// Immediately notify newly connected client that this peer is online!
+					peerOnlineEnv, _ := json.Marshal(Envelope{
+						ID:        fmt.Sprintf("pres-init-%d", time.Now().UnixMilli()),
+						From:      id,
+						To:        client.ID,
+						Type:      "presence",
+						Payload:   json.RawMessage(`{"status":"online"}`),
+						Timestamp: time.Now().UnixMilli(),
+					})
+					select {
+					case client.Send <- peerOnlineEnv:
+					default:
+					}
 				}
 			}
 			h.mutex.Unlock()
@@ -664,7 +678,10 @@ func (c *Client) readPump(hub *Hub) {
 				Payload:   json.RawMessage(fmt.Sprintf(`{"status":"%s"}`, status)),
 				Timestamp: time.Now().UnixMilli(),
 			})
-			c.Send <- respEnv
+			select {
+			case c.Send <- respEnv:
+			default:
+			}
 			continue
 		}
 
