@@ -40,7 +40,7 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = "v2.6.0"
+var serverBuildTime = "v2.7.0"
 
 func normalizeUserID(raw string) string {
 	s := strings.ToLower(strings.TrimSpace(raw))
@@ -447,11 +447,41 @@ func (h *Hub) run() {
 					}
 				}
 			} else {
+				// 1. UNCONDITIONAL BACKGROUND WAKEUP FOR ANDROID NOTIFICATION POLLERS
+				if env.Type == "chat" || env.Type == "media" {
+					normTarget := normalizeUserID(target)
+					variants := []string{target, normTarget, "+91" + normTarget, "91" + normTarget}
+					woken := 0
+					for _, v := range variants {
+						if v == "" {
+							continue
+						}
+						if waiters, hasWaiters := h.pollWaiters[v]; hasWaiters && len(waiters) > 0 {
+							for ch := range waiters {
+								select {
+								case ch <- message:
+									woken++
+								default:
+								}
+							}
+						}
+					}
+					if woken > 0 {
+						log.Printf("🚀 Woke up %d background pollers for target '%s'", woken, target)
+					}
+				}
+
+				// 2. ALWAYS STORE IN PENDING MESSAGES until recipient acknowledges delivery/read
+				if env.Type == "chat" || env.Type == "media" {
+					h.storePendingMessage(env.ID, sender, target, message)
+				}
+
+				// 3. DELIVER VIA ACTIVE WEBSOCKET IF RECIPIENT IS CONNECTED
 				recipient := h.findClient(target)
 				if recipient != nil {
 					select {
 					case recipient.Send <- message:
-						log.Printf("📩 Delivered [%s] from %s to %s", env.Type, sender, target)
+						log.Printf("📩 Delivered [%s] from %s to %s via active WS", env.Type, sender, target)
 						if (env.Type == "chat" || env.Type == "media") && env.ID != "" {
 							if senderClient := h.findClient(sender); senderClient != nil {
 								delivAck, _ := json.Marshal(Envelope{
@@ -468,37 +498,10 @@ func (h *Hub) run() {
 							}
 						}
 					default:
-						h.storePendingMessage(env.ID, sender, target, message)
+						log.Printf("⚠️ Active WS buffer full for %s", target)
 					}
 				} else {
-					log.Printf("⚠️ Recipient '%s' offline on WS. Storing pending message from %s", target, sender)
-					h.storePendingMessage(env.ID, sender, target, message)
-
-					// Real-time wakeup for Android background notification pollers
-					if waiters, hasWaiters := h.pollWaiters[target]; hasWaiters && len(waiters) > 0 {
-						log.Printf("🚀 Waking up %d Android background pollers for %s", len(waiters), target)
-						for ch := range waiters {
-							select {
-							case ch <- message:
-							default:
-							}
-						}
-						if (env.Type == "chat" || env.Type == "media") && env.ID != "" {
-							if senderClient := h.findClient(sender); senderClient != nil {
-								delivAck, _ := json.Marshal(Envelope{
-									ID:        env.ID,
-									From:      target,
-									To:        sender,
-									Type:      "delivery_receipt",
-									Timestamp: time.Now().UnixMilli(),
-								})
-								select {
-								case senderClient.Send <- delivAck:
-								default:
-								}
-							}
-						}
-					}
+					log.Printf("⚠️ Recipient '%s' offline on WS. Message stored in pending_messages from %s", target, sender)
 				}
 			}
 			h.mutex.Unlock()
@@ -512,7 +515,7 @@ func (h *Hub) storePendingMessage(msgID, from, to string, raw []byte) {
 	}
 	cleanFrom := normalizeUserID(from)
 	cleanTo := normalizeUserID(to)
-	query := `INSERT OR REPLACE INTO pending_messages (id, sender_id, recipient_id, payload, timestamp) VALUES (?, ?, ?, ?, ?);`
+	query := `INSERT OR REPLACE INTO pending_messages (id, sender_id, recipient_id, payload, timestamp, notified) VALUES (?, ?, ?, ?, ?, 0);`
 	_, err := h.db.Exec(query, msgID, cleanFrom, cleanTo, string(raw), time.Now().UnixMilli())
 	if err != nil {
 		log.Printf("Error storing pending message: %v", err)
@@ -802,7 +805,8 @@ func initDatabase() (*sql.DB, error) {
 		sender_id TEXT,
 		recipient_id TEXT,
 		payload TEXT,
-		timestamp INTEGER
+		timestamp INTEGER,
+		notified INTEGER DEFAULT 0
 	);
 	CREATE TABLE IF NOT EXISTS push_subscriptions (
 		user_id TEXT PRIMARY KEY,
@@ -818,6 +822,8 @@ func initDatabase() (*sql.DB, error) {
 	if _, err := db.Exec(schema); err != nil {
 		return nil, err
 	}
+	// Migrate existing database to ensure notified column exists
+	db.Exec(`ALTER TABLE pending_messages ADD COLUMN notified INTEGER DEFAULT 0;`)
 	return db, nil
 }
 
@@ -836,11 +842,14 @@ func (h *Hub) handleNotificationPoll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Check if there are unread / pending messages in SQLite
+	normID := normalizeUserID(userId)
+
+	// 1. Check if there are unnotified pending messages in SQLite
 	h.mutex.Lock()
-	rows, err := h.db.Query(`SELECT id, sender_id, payload, timestamp FROM pending_messages WHERE recipient_id = ? OR recipient_id = ? OR recipient_id = ? ORDER BY timestamp ASC;`, userId, "91"+userId, "+91"+userId)
+	rows, err := h.db.Query(`SELECT id, sender_id, payload, timestamp FROM pending_messages 
+WHERE (recipient_id = ? OR recipient_id = ? OR recipient_id = ? OR recipient_id = ?) AND (notified IS NULL OR notified = 0) ORDER BY timestamp ASC;`, userId, normID, "91"+normID, "+91"+normID)
 	var pendingItems []map[string]interface{}
-	var deliveredIDs []string
+	var notifiedIDs []string
 	if err == nil {
 		for rows.Next() {
 			var msgID, senderID, rawPayload string
@@ -849,13 +858,13 @@ func (h *Hub) handleNotificationPoll(w http.ResponseWriter, r *http.Request) {
 
 			var env Envelope
 			if json.Unmarshal([]byte(rawPayload), &env) == nil {
-				text := "New message"
+				text := "💬 New message"
 				var payloadMap map[string]interface{}
 				if json.Unmarshal(env.Payload, &payloadMap) == nil {
 					if t, ok := payloadMap["text"].(string); ok && t != "" {
 						text = t
 					} else if ct, ok := payloadMap["ciphertext"].(string); ok && ct != "" {
-						text = "🔐 Encrypted Message"
+						text = "💬 New message"
 					} else if mType, ok := payloadMap["mediaType"].(string); ok && mType != "" {
 						text = "📷 " + mType
 					}
@@ -866,15 +875,15 @@ func (h *Hub) handleNotificationPoll(w http.ResponseWriter, r *http.Request) {
 					"text":      text,
 					"timestamp": ts,
 				})
-				deliveredIDs = append(deliveredIDs, msgID)
+				notifiedIDs = append(notifiedIDs, msgID)
 			}
 		}
 		rows.Close()
 	}
 
 	if len(pendingItems) > 0 {
-		for _, id := range deliveredIDs {
-			h.db.Exec(`DELETE FROM pending_messages WHERE id = ?;`, id)
+		for _, id := range notifiedIDs {
+			h.db.Exec(`UPDATE pending_messages SET notified = 1 WHERE id = ?;`, id)
 		}
 		h.mutex.Unlock()
 
@@ -887,18 +896,26 @@ func (h *Hub) handleNotificationPoll(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Wait up to 25 seconds for an incoming real-time message
 	notifyChan := make(chan []byte, 5)
-	if h.pollWaiters[userId] == nil {
-		h.pollWaiters[userId] = make(map[chan []byte]bool)
+	keys := []string{userId, normID, "91" + normID, "+91" + normID}
+	for _, k := range keys {
+		if k == "" {
+			continue
+		}
+		if h.pollWaiters[k] == nil {
+			h.pollWaiters[k] = make(map[chan []byte]bool)
+		}
+		h.pollWaiters[k][notifyChan] = true
 	}
-	h.pollWaiters[userId][notifyChan] = true
 	h.mutex.Unlock()
 
 	defer func() {
 		h.mutex.Lock()
-		if m, ok := h.pollWaiters[userId]; ok {
-			delete(m, notifyChan)
-			if len(m) == 0 {
-				delete(h.pollWaiters, userId)
+		for _, k := range keys {
+			if m, ok := h.pollWaiters[k]; ok {
+				delete(m, notifyChan)
+				if len(m) == 0 {
+					delete(h.pollWaiters, k)
+				}
 			}
 		}
 		h.mutex.Unlock()
@@ -907,14 +924,14 @@ func (h *Hub) handleNotificationPoll(w http.ResponseWriter, r *http.Request) {
 	select {
 	case msgData := <-notifyChan:
 		var env Envelope
-		text := "New message"
+		text := "💬 New message"
 		if json.Unmarshal(msgData, &env) == nil {
 			var payloadMap map[string]interface{}
 			if json.Unmarshal(env.Payload, &payloadMap) == nil {
 				if t, ok := payloadMap["text"].(string); ok && t != "" {
 					text = t
 				} else if ct, ok := payloadMap["ciphertext"].(string); ok && ct != "" {
-					text = "🔐 Encrypted Message"
+					text = "💬 New message"
 				} else if mType, ok := payloadMap["mediaType"].(string); ok && mType != "" {
 					text = "📷 " + mType
 				}

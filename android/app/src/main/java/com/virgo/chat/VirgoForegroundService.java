@@ -1,5 +1,6 @@
 package com.virgo.chat;
 
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -18,10 +19,12 @@ import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.Log;
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.BufferedReader;
@@ -59,7 +62,7 @@ public class VirgoForegroundService extends Service {
             try {
                 CharSequence name = "Virgo Background Service";
                 String description = "Keeps Virgo connected for real-time messages and notifications";
-                int importance = NotificationManager.IMPORTANCE_LOW; // Silent ongoing service
+                int importance = NotificationManager.IMPORTANCE_LOW;
                 NotificationChannel channel = new NotificationChannel(SERVICE_CHANNEL_ID, name, importance);
                 channel.setDescription(description);
                 channel.setShowBadge(false);
@@ -123,7 +126,7 @@ public class VirgoForegroundService extends Service {
                 .setContentText("Connected & listening for messages")
                 .setSmallIcon(R.drawable.ic_stat_virgo)
                 .setContentIntent(pendingIntent)
-                .setPriority(NotificationCompat.PRIORITY_MIN)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setOngoing(true);
 
             Notification notification = builder.build();
@@ -152,7 +155,6 @@ public class VirgoForegroundService extends Service {
                 wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "Virgo:WifiLock");
                 wifiLock.acquire();
             }
-            Log.d(TAG, "WakeLock & WifiLock active");
         } catch (Exception e) {
             Log.e(TAG, "Error acquiring locks: " + e.getMessage());
         }
@@ -167,11 +169,12 @@ public class VirgoForegroundService extends Service {
         pollingThread = new Thread(() -> {
             Log.d(TAG, "🚀 Virgo Native Background Poller thread started");
             while (isPollingRunning) {
+                HttpURLConnection conn = null;
                 try {
                     SharedPreferences prefs = getSharedPreferences("virgo_prefs", Context.MODE_PRIVATE);
                     String userId = prefs.getString("active_user_id", "");
                     if (userId == null || userId.trim().isEmpty()) {
-                        Thread.sleep(2000);
+                        Thread.sleep(1500);
                         continue;
                     }
 
@@ -179,11 +182,11 @@ public class VirgoForegroundService extends Service {
 
                     String targetUrl = "https://virgo-chat.onrender.com/api/notifications/poll?userId=" + URLEncoder.encode(userId.trim(), "UTF-8");
                     URL url = new URL(targetUrl);
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn = (HttpURLConnection) url.openConnection();
                     conn.setRequestMethod("GET");
                     conn.setConnectTimeout(10000);
                     conn.setReadTimeout(30000); // 30s timeout matching 25s server hold
-                    conn.setRequestProperty("User-Agent", "VirgoNativeClient/2.6.0");
+                    conn.setRequestProperty("User-Agent", "VirgoNativeClient/2.7.0");
 
                     int code = conn.getResponseCode();
                     if (code == 200) {
@@ -197,13 +200,18 @@ public class VirgoForegroundService extends Service {
 
                         handlePollPayload(sb.toString());
                     } else {
-                        Thread.sleep(3000);
+                        Thread.sleep(2000);
                     }
                 } catch (Exception e) {
-                    // Log and sleep briefly before retry
                     try {
-                        Thread.sleep(2500);
+                        Thread.sleep(2000);
                     } catch (Exception ignored) {}
+                } finally {
+                    if (conn != null) {
+                        try {
+                            conn.disconnect();
+                        } catch (Exception ignored) {}
+                    }
                 }
             }
             Log.d(TAG, "Virgo Native Background Poller thread ended");
@@ -224,8 +232,9 @@ public class VirgoForegroundService extends Service {
 
                     Log.d(TAG, "📩 Native Poller received message from " + from + ": " + text);
 
-                    // If app is not in the active foreground, trigger native heads-up notification!
-                    if (!isActivityInForeground) {
+                    // Post heads-up notification if app is in background OR user is viewing a different chat
+                    boolean inForegroundWithSameUser = isActivityInForeground && MainActivity.currentOpenChat != null && MainActivity.currentOpenChat.equalsIgnoreCase(from);
+                    if (!inForegroundWithSameUser) {
                         postMessageNotification(from, text);
                     }
                 }
@@ -303,6 +312,32 @@ public class VirgoForegroundService extends Service {
         acquireLocks();
         startPollingLoop();
         return START_STICKY;
+    }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        Log.d(TAG, "Virgo onTaskRemoved - scheduling immediate restart");
+        try {
+            Intent restartServiceIntent = new Intent(getApplicationContext(), VirgoForegroundService.class);
+            restartServiceIntent.setPackage(getPackageName());
+            PendingIntent restartPendingIntent = PendingIntent.getService(
+                getApplicationContext(),
+                1,
+                restartServiceIntent,
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_ONE_SHOT
+            );
+            AlarmManager alarmService = (AlarmManager) getApplicationContext().getSystemService(Context.ALARM_SERVICE);
+            if (alarmService != null) {
+                alarmService.set(
+                    AlarmManager.ELAPSED_REALTIME,
+                    SystemClock.elapsedRealtime() + 1000,
+                    restartPendingIntent
+                );
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error in onTaskRemoved restart: " + e.getMessage());
+        }
+        super.onTaskRemoved(rootIntent);
     }
 
     @Override

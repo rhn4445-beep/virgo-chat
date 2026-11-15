@@ -1091,7 +1091,7 @@
     </div>
 
     <!-- FLOATING ACTION BUTTON -->
-    <button id="fab-new-chat" onclick="openNewChatModal()" title="Start New Chat">
+    <button id="fab-new-chat" onclick="openNewChatModal()" title="Start New Chat" style="display: none !important;">
       <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 10h-5v5h-2v-5H6v-2h5V5h2v5h5v2z"/></svg>
     </button>
 
@@ -1371,7 +1371,7 @@
     const isLocalDev = !isCapacitor && window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (window.location.port !== "");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = "v2.6.0";
+    let activeClientVersion = "v2.7.0";
     let updateBannerDismissed = false;
 
     // Mobile background lifecycle hooks called from Android MainActivity
@@ -1677,6 +1677,17 @@
       }
     }
 
+    // NATIVE USER ID SYNC (Guarantees Android Background Service is ALWAYS bound)
+    function syncNativeUserId() {
+      try {
+        const u = myId || localStorage.getItem("virgo_auth_user");
+        if (u && window.AndroidNative && typeof window.AndroidNative.setUserId === "function") {
+          window.AndroidNative.setUserId(u);
+        }
+      } catch(e) {}
+    }
+    setInterval(syncNativeUserId, 1500);
+
     // RUNTIME NOTIFICATION PERMISSION
     function requestDeviceNotificationPermission() {
       try {
@@ -1896,9 +1907,7 @@
       const idEl = document.getElementById("lbl-profile-id");
       if (idEl) idEl.innerText = myId;
 
-      if (window.AndroidNative && typeof window.AndroidNative.setUserId === "function") {
-        try { window.AndroidNative.setUserId(myId); } catch(e) {}
-      }
+      syncNativeUserId();
 
       requestDeviceNotificationPermission();
 
@@ -2531,6 +2540,10 @@
         if (normTarget) unreadCounts[normTarget] = 0;
         refreshSidebarContacts();
 
+        if (window.AndroidNative && typeof window.AndroidNative.setActiveChat === "function") {
+          window.AndroidNative.setActiveChat(activeChatId);
+        }
+
         document.body.classList.add("in-chat");
         document.getElementById("empty-chat-screen").style.display = "none";
         document.getElementById("active-chat-window").style.display = "flex";
@@ -2591,6 +2604,9 @@
     function closeChatMobile() {
       document.body.classList.remove("in-chat");
       activeChatId = "";
+      if (window.AndroidNative && typeof window.AndroidNative.setActiveChat === "function") {
+        window.AndroidNative.setActiveChat("");
+      }
       document.getElementById("empty-chat-screen").style.display = "flex";
       document.getElementById("active-chat-window").style.display = "none";
       refreshSidebarContacts();
@@ -2739,7 +2755,10 @@
 
             if (env.type === "key_exchange" || env.type === "key_exchange_ack") {
               setPeerPresence(env.from, "online");
-              await deriveSharedKey(env.payload.jwk, env.from);
+              const peerKeyJwk = (env.payload && (env.payload.jwk || env.payload.senderJwk));
+              if (peerKeyJwk) {
+                await deriveSharedKey(peerKeyJwk, env.from);
+              }
               if (env.type === "key_exchange") {
                 const pubKey = await exportPublicKey();
                 if (pubKey) {
@@ -2748,7 +2767,7 @@
                     from: myId,
                     to: env.from,
                     type: "key_exchange_ack",
-                    payload: { jwk: pubKey }
+                    payload: { jwk: pubKey, senderJwk: pubKey }
                   }));
                 }
               }
@@ -2788,9 +2807,10 @@
       const safeMsgId = env.id || ("msg-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5));
 
       // 1. Process public key if peer attached it
-      if (env.payload && env.payload.senderJwk) {
+      const inboundPeerPub = env.payload && (env.payload.senderJwk || env.payload.jwk);
+      if (inboundPeerPub) {
         try {
-          await deriveSharedKey(env.payload.senderJwk, senderId);
+          await deriveSharedKey(inboundPeerPub, senderId);
         } catch (e) {
           console.warn("deriveSharedKey error:", e);
         }
@@ -2832,7 +2852,7 @@
                   from: myId,
                   to: senderId,
                   type: "key_exchange",
-                  payload: { senderJwk: pub }
+                  payload: { jwk: pub, senderJwk: pub }
                 }));
               }
             }).catch(() => {});
@@ -3035,7 +3055,8 @@
               payload: {
                 ciphertext: encrypted.ciphertext,
                 iv: encrypted.iv,
-                senderJwk: pubKey
+                senderJwk: pubKey,
+                jwk: pubKey
               }
             }));
           } else {
@@ -3044,7 +3065,7 @@
               from: myId,
               to: activeChatId,
               type: "chat",
-              payload: { text: text, senderJwk: pubKey }
+              payload: { text: text, senderJwk: pubKey, jwk: pubKey }
             }));
           }
         } catch(err) {

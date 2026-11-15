@@ -5,6 +5,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
 import android.media.AudioAttributes;
 import android.media.Ringtone;
@@ -20,6 +21,7 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -27,6 +29,7 @@ public class MainActivity extends BridgeActivity {
     private static final String CHANNEL_ID = "virgo_chat_messages";
     private static final int PERMISSION_REQ_CODE = 101;
     public static volatile boolean isAppInForeground = false;
+    public static volatile String currentOpenChat = "";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -35,6 +38,7 @@ public class MainActivity extends BridgeActivity {
         setupWebViewAndBridge();
         requestNotificationPermission();
         startVirgoBackgroundService();
+        syncUserIdFromWebView();
     }
 
     @Override
@@ -42,6 +46,7 @@ public class MainActivity extends BridgeActivity {
         super.onStart();
         setupWebViewAndBridge();
         startVirgoBackgroundService();
+        syncUserIdFromWebView();
     }
 
     @Override
@@ -52,6 +57,7 @@ public class MainActivity extends BridgeActivity {
         setupWebViewAndBridge();
         requestNotificationPermission();
         startVirgoBackgroundService();
+        syncUserIdFromWebView();
         try {
             if (this.bridge != null && this.bridge.getWebView() != null) {
                 this.bridge.getWebView().resumeTimers();
@@ -71,6 +77,31 @@ public class MainActivity extends BridgeActivity {
                 this.bridge.getWebView().evaluateJavascript("if (window.onVirgoPause) window.onVirgoPause();", null);
             }
         } catch (Exception ignored) {}
+    }
+
+    private void syncUserIdFromWebView() {
+        runOnUiThread(() -> {
+            try {
+                if (this.bridge != null && this.bridge.getWebView() != null) {
+                    this.bridge.getWebView().evaluateJavascript(
+                        "(function() { try { return localStorage.getItem('virgo_auth_user') || window.myId || ''; } catch(e){ return ''; } })();",
+                        value -> {
+                            if (value != null && !value.equals("null") && !value.equals("\"\"")) {
+                                String clean = value.replace("\"", "").trim().toLowerCase();
+                                if (!clean.isEmpty()) {
+                                    getSharedPreferences("virgo_prefs", Context.MODE_PRIVATE)
+                                        .edit()
+                                        .putString("active_user_id", clean)
+                                        .apply();
+                                    Log.d(TAG, "Successfully synced user ID from WebView: " + clean);
+                                    startVirgoBackgroundService();
+                                }
+                            }
+                        }
+                    );
+                }
+            } catch (Exception ignored) {}
+        });
     }
 
     private void startVirgoBackgroundService() {
@@ -130,6 +161,12 @@ public class MainActivity extends BridgeActivity {
                                 Log.d(TAG, "Saved active_user_id for background service: " + userId);
                                 startVirgoBackgroundService();
                             }
+                        }
+
+                        @JavascriptInterface
+                        public void setActiveChat(String peerId) {
+                            currentOpenChat = peerId != null ? peerId.trim().toLowerCase() : "";
+                            Log.d(TAG, "Current active chat updated: " + currentOpenChat);
                         }
 
                         @JavascriptInterface
@@ -199,8 +236,20 @@ public class MainActivity extends BridgeActivity {
 
     private void requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, PERMISSION_REQ_CODE);
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQ_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "POST_NOTIFICATIONS permission granted by user");
+                createNotificationChannel();
+                startVirgoBackgroundService();
             }
         }
     }
