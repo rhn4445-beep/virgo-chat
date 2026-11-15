@@ -821,37 +821,217 @@
     .virgo-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 99998; display: none; align-items: center; justify-content: center; padding: 16px; }
     .virgo-dialog { background: var(--bg-surface); border: 1px solid var(--border-starlight); border-radius: 20px; width: 100%; max-width: 380px; padding: 26px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
 
-    /* WELCOME SCREEN */
-    #welcome-screen-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at 50% 25%, #141f33 0%, #06090e 80%); z-index: 999999; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-    .welcome-box { background: var(--bg-surface); border: 1px solid var(--border-starlight); border-radius: 26px; padding: 36px 28px; width: 100%; max-width: 380px; display: flex; flex-direction: column; align-items: center; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 35px var(--virgo-gold-glow); }
-    .welcome-logo-emblem { width: 92px; height: 92px; border-radius: 50%; object-fit: cover; border: 2px solid var(--virgo-gold); box-shadow: 0 0 24px var(--virgo-gold-glow); margin-bottom: 20px; }
-    .welcome-header-title { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 6px; }
-    .welcome-header-sub { font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 26px; }
-
-    .btn-google-auth {
-      display: inline-flex;
+    /* DEDICATED FULL-PAGE AUTHENTICATION SCREEN */
+    #auth-page {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle at 50% 18%, #17263e 0%, #0c1421 65%, #05080e 100%);
+      z-index: 999999;
+      display: none;
       align-items: center;
       justify-content: center;
-      background: #111827;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      color: #ffffff;
-      padding: 11px 20px;
-      border-radius: 24px;
-      font-size: 13.5px;
-      font-weight: 600;
-      cursor: pointer;
-      width: 100%;
-      gap: 10px;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+      padding: 16px;
+      overflow-y: auto;
     }
-    .btn-google-auth:hover {
-      background: #1e293b;
+    .auth-card {
+      background: rgba(14, 21, 33, 0.94);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      border-radius: 28px;
+      padding: 36px 28px;
+      width: 100%;
+      max-width: 410px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 45px rgba(245, 197, 66, 0.2);
+      backdrop-filter: blur(28px);
+    }
+    .auth-brand { display: flex; flex-direction: column; align-items: center; margin-bottom: 22px; }
+    .auth-logo-halo {
+      position: relative;
+      width: 82px;
+      height: 82px;
+      border-radius: 50%;
+      padding: 3px;
+      background: linear-gradient(135deg, var(--virgo-gold-bright), #b8860b, #ffd700);
+      box-shadow: 0 0 26px var(--virgo-gold-glow);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .auth-logo-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+    .auth-brand-name { font-size: 26px; font-weight: 800; color: #fff; letter-spacing: 2px; margin: 0 0 4px; }
+    .auth-brand-pill {
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--virgo-gold-bright);
+      background: rgba(245, 197, 66, 0.12);
+      border: 1px solid rgba(245, 197, 66, 0.3);
+      border-radius: 20px;
+      padding: 3px 12px;
+      margin-bottom: 8px;
+    }
+    .auth-brand-desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.45; margin: 0; max-width: 320px; }
+
+    /* AUTH TABS */
+    .auth-tabs {
+      display: flex;
+      width: 100%;
+      background: rgba(8, 12, 19, 0.7);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 4px;
+      gap: 4px;
+      margin-bottom: 20px;
+    }
+    .auth-tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-radius: 10px;
+      color: var(--text-muted);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 8px 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+    .auth-tab-btn.active {
+      background: var(--bg-card);
+      color: var(--virgo-gold-bright);
+      border: 1px solid var(--border-starlight);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    /* AUTH FORMS */
+    .auth-panel { width: 100%; display: flex; flex-direction: column; gap: 12px; text-align: left; }
+    .auth-field-label { font-size: 11px; font-weight: 700; color: var(--virgo-gold-bright); text-transform: uppercase; letter-spacing: 0.5px; }
+    .auth-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .auth-input-icon {
+      position: absolute;
+      left: 14px;
+      width: 18px;
+      height: 18px;
+      pointer-events: none;
+    }
+    .auth-text-input {
+      width: 100%;
+      background: rgba(8, 13, 22, 0.85);
+      border: 1px solid var(--border-starlight);
+      border-radius: 14px;
+      color: #fff;
+      font-size: 13.5px;
+      padding: 12px 14px 12px 42px;
+      outline: none;
+      transition: all 0.2s;
+    }
+    .auth-text-input:focus {
       border-color: var(--virgo-gold);
+      box-shadow: 0 0 16px var(--virgo-gold-glow);
+      background: rgba(10, 16, 28, 0.95);
+    }
+    .auth-select-country {
+      background: rgba(8, 13, 22, 0.85);
+      border: 1px solid var(--border-starlight);
+      border-radius: 14px;
+      color: #fff;
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 12px 10px;
+      outline: none;
+      cursor: pointer;
+    }
+    .auth-pills-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: -2px;
+      margin-bottom: 2px;
+    }
+    .auth-pill-chip {
+      background: rgba(245, 197, 66, 0.1);
+      border: 1px solid rgba(245, 197, 66, 0.25);
+      color: var(--virgo-gold-bright);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .auth-pill-chip:hover {
+      background: rgba(245, 197, 66, 0.2);
+      border-color: var(--virgo-gold);
+    }
+    .auth-submit-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--virgo-gold-bright), var(--virgo-gold));
+      color: #06090e;
+      font-size: 13.5px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      padding: 13px;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 20px var(--virgo-gold-glow);
+      transition: all 0.2s;
+      margin-top: 4px;
+    }
+    .auth-submit-btn:hover {
+      filter: brightness(1.08);
       transform: translateY(-1px);
     }
-    .btn-google-auth:active {
-      transform: translateY(1px);
+    .auth-submit-btn:active { transform: translateY(1px); }
+
+    .auth-security-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-top: 20px;
+    }
+
+    .header-user-tag {
+      font-size: 10.5px;
+      color: var(--virgo-gold-bright);
+      font-weight: 600;
+      max-width: 140px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      opacity: 0.9;
+      transition: opacity 0.15s;
+    }
+    .header-user-tag:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+    .switch-acc-btn {
+      color: var(--virgo-gold-bright) !important;
     }
 
     /* DROPDOWN MENU */
@@ -1317,23 +1497,25 @@
 
     <div class="sidebar-header">
       <div class="sidebar-title-wrap">
-        <img class="mobile-logo-img" src="icon.png" alt="Virgo" onclick="applyInstantUpdate()" title="Virgo">
-        <span class="sidebar-title">Virgo <span class="sidebar-badge">E2EE</span></span>
+        <img class="mobile-logo-img" src="icon.png" alt="Virgo" onclick="applyInstantUpdate()" title="Virgo - Tap to check updates">
+        <div style="display:flex;flex-direction:column;gap:1px;text-align:left;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="sidebar-title">Virgo</span>
+            <span class="sidebar-badge">E2EE</span>
+          </div>
+          <span id="header-my-id-pill" class="header-user-tag" onclick="showAuthPage()" title="Click to switch account / login">guest@virgo</span>
+        </div>
       </div>
       <div class="sidebar-header-actions">
-        <button class="action-icon-btn" onclick="openCameraModal()" title="Take Photo / Camera">
-          <svg viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
-        </button>
-        <button class="action-icon-btn" onclick="openNewChatModal()" title="New Chat">
+        <button class="action-icon-btn" onclick="openNewChatModal()" title="Start New Chat">
           <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
         </button>
-        <button class="action-icon-btn" onclick="openStorageModal()" title="Storage & Local Database">
+        <button class="action-icon-btn" onclick="openStorageModal()" title="Local Storage & Media Vault">
           <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
         </button>
-        <button class="action-icon-btn" onclick="applyInstantUpdate()" title="Sync & Check for Updates">
-          <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+        <button class="action-icon-btn switch-acc-btn" onclick="showAuthPage()" title="Switch Account / Sign In">
+          <svg viewBox="0 0 24 24"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
         </button>
-        <button id="quick-signin-btn" onclick="showWelcomeScreen()" style="background:linear-gradient(135deg, var(--virgo-gold-bright), var(--virgo-gold));color:#06090e;border:none;border-radius:16px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer;">Sign In</button>
       </div>
     </div>
 
@@ -1615,63 +1797,111 @@
     </div>
   </div>
 
-  <!-- WELCOME / LOGIN MODAL -->
-  <div id="welcome-screen-modal">
-    <div class="welcome-box">
-      <img class="welcome-logo-emblem" src="icon.png" alt="Virgo">
-      <h2 class="welcome-header-title">Welcome to Virgo</h2>
-      <p class="welcome-header-sub">Private, decentralized celestial messaging with end-to-end encryption.</p>
-
-      <div style="width:100%;display:flex;flex-direction:column;gap:14px;">
-        <div style="display:flex;flex-direction:column;gap:6px;text-align:left;">
-          <label style="color:var(--virgo-gold-bright);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Your Name, Phone or Email</label>
-          <input id="welcome-inp-user" type="text" placeholder="e.g. rhn4445@gmail.com or 7861941270" class="field-input-box" onkeydown="if(event.key==='Enter')handleWelcomeLogin()">
+  <!-- DEDICATED FULL-PAGE AUTHENTICATION SCREEN -->
+  <div id="auth-page">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="auth-logo-halo">
+          <img src="icon.png" alt="Virgo" class="auth-logo-img">
         </div>
-        <button onclick="handleWelcomeLogin()" class="btn-gold-save">ENTER VIRGO</button>
+        <h1 class="auth-brand-name">Virgo Messenger</h1>
+        <span class="auth-brand-pill">✦ CELESTIAL SPEED • END-TO-END ENCRYPTED ✦</span>
+        <p class="auth-brand-desc">Sign in with your Gmail, Mobile Number, or Custom ID to access your private encrypted chats and media vault.</p>
+      </div>
 
-        <div style="display:flex;align-items:center;gap:10px;margin:6px 0;">
-          <div style="flex:1;height:1px;background:var(--border-subtle);"></div>
-          <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">or sign in with</span>
-          <div style="flex:1;height:1px;background:var(--border-subtle);"></div>
-        </div>
-
-        <button type="button" class="btn-google-auth" onclick="openGmailLoginPrompt()">
-          <svg width="20" height="20" viewBox="0 0 24 24" style="flex-shrink:0;">
+      <!-- AUTH TABS -->
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab-btn active" id="tab-btn-gmail" onclick="switchAuthTab('gmail')">
+          <svg width="15" height="15" viewBox="0 0 24 24" style="flex-shrink:0;">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
           </svg>
-          <span>Sign in with Google / Gmail</span>
+          <span>Gmail</span>
+        </button>
+        <button type="button" class="auth-tab-btn" id="tab-btn-phone" onclick="switchAuthTab('phone')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/>
+          </svg>
+          <span>Phone</span>
+        </button>
+        <button type="button" class="auth-tab-btn" id="tab-btn-custom" onclick="switchAuthTab('custom')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+          <span>Username</span>
         </button>
       </div>
-    </div>
-  </div>
 
-  <!-- GMAIL SIGN IN DIALOG -->
-  <div class="virgo-modal" id="gmail-login-modal" style="display:none;z-index:1000000;">
-    <div class="virgo-dialog" style="max-width:360px;text-align:center;">
-      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;">
-        <svg width="30" height="30" viewBox="0 0 24 24">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+      <!-- PANEL 1: GMAIL -->
+      <div class="auth-panel" id="auth-panel-gmail">
+        <label class="auth-field-label">Gmail / Google Account</label>
+        <div class="auth-input-wrap">
+          <svg class="auth-input-icon" viewBox="0 0 24 24" fill="var(--virgo-gold)">
+            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+          </svg>
+          <input type="text" id="auth-inp-gmail" class="auth-text-input" placeholder="e.g. rhn4445 or user@gmail.com" onkeydown="if(event.key==='Enter')submitAuthGmail()">
+        </div>
+        <div class="auth-pills-row">
+          <span style="font-size:10.5px;color:var(--text-muted);">Quick fill:</span>
+          <button type="button" class="auth-pill-chip" onclick="quickAppendGmailDomain()">+ @gmail.com</button>
+          <button type="button" class="auth-pill-chip" onclick="quickFillGmail('rhn4445@gmail.com')">rhn4445@gmail.com</button>
+        </div>
+        <button type="button" class="auth-submit-btn" onclick="submitAuthGmail()">
+          <span>Continue with Gmail</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>
+        </button>
+      </div>
+
+      <!-- PANEL 2: PHONE NUMBER -->
+      <div class="auth-panel" id="auth-panel-phone" style="display:none;">
+        <label class="auth-field-label">Mobile Phone Number</label>
+        <div style="display:flex;gap:8px;width:100%;">
+          <select id="auth-country-select" class="auth-select-country">
+            <option value="+91" selected>🇮🇳 +91 (India)</option>
+            <option value="+1">🇺🇸 +1 (USA)</option>
+            <option value="+44">🇬🇧 +44 (UK)</option>
+            <option value="+971">🇦🇪 +971 (UAE)</option>
+            <option value="+61">🇦🇺 +61 (Australia)</option>
+            <option value="+49">🇩🇪 +49 (Germany)</option>
+            <option value="+33">🇫🇷 +33 (France)</option>
+            <option value="+81">🇯🇵 +81 (Japan)</option>
+            <option value="">Other</option>
+          </select>
+          <div class="auth-input-wrap" style="flex:1;">
+            <svg class="auth-input-icon" viewBox="0 0 24 24" fill="var(--virgo-gold)">
+              <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+            </svg>
+            <input type="tel" id="auth-inp-phone" class="auth-text-input" placeholder="e.g. 7861941270" onkeydown="if(event.key==='Enter')submitAuthPhone()">
+          </div>
+        </div>
+        <button type="button" class="auth-submit-btn" onclick="submitAuthPhone()">
+          <span>Sign In with Phone</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>
+        </button>
+      </div>
+
+      <!-- PANEL 3: USERNAME / ID -->
+      <div class="auth-panel" id="auth-panel-custom" style="display:none;">
+        <label class="auth-field-label">Decentralized User ID / Handle</label>
+        <div class="auth-input-wrap">
+          <svg class="auth-input-icon" viewBox="0 0 24 24" fill="var(--virgo-gold)">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+          <input type="text" id="auth-inp-custom" class="auth-text-input" placeholder="e.g. starlight_virgo" onkeydown="if(event.key==='Enter')submitAuthCustom()">
+        </div>
+        <button type="button" class="auth-submit-btn" onclick="submitAuthCustom()">
+          <span>Enter Virgo</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>
+        </button>
+      </div>
+
+      <div class="auth-security-badge">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--virgo-gold)">
+          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
         </svg>
-        <h3 style="color:#fff;font-size:18px;font-weight:700;margin:0;">Sign in with Gmail</h3>
-      </div>
-      <p style="color:var(--text-muted);font-size:12.5px;margin-bottom:14px;line-height:1.45;">Enter your Gmail username or full email address to sign in immediately with end-to-end encryption.</p>
-      
-      <div style="position:relative;margin-bottom:14px;text-align:left;">
-        <input id="inp-gmail-address" type="text" placeholder="e.g. rhn4445 or rhn4445@gmail.com" class="field-input-box" onkeydown="if(event.key==='Enter')confirmGmailLogin()">
-      </div>
-
-      <div style="display:flex;gap:10px;">
-        <button onclick="closeGmailLoginModal()" style="flex:1;background:transparent;border:1px solid var(--border-subtle);color:var(--text-muted);padding:10px;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
-        <button onclick="confirmGmailLogin()" class="btn-gold-save" style="flex:1.5;margin-top:0;padding:10px;">ENTER VIRGO</button>
-      </div>
-    </div>
-  </div>
+        <span>End-to-End Encrypted with WebCrypto ECDH-P256 &amp; AES-GCM</span>
       </div>
     </div>
   </div>
@@ -2323,39 +2553,72 @@
       }
     }
 
-    function logout() {
-      if (ws) ws.close();
-      localStorage.removeItem("virgo_auth_user");
-      localStorage.removeItem("virgo_auth_token");
-      location.reload();
-    }
-
-    function showWelcomeScreen() {
-      const modal = document.getElementById("welcome-screen-modal");
-      if (modal) modal.style.display = "flex";
-    }
-
-    function openGmailLoginPrompt() {
-      const modal = document.getElementById("gmail-login-modal");
-      if (modal) {
-        modal.style.display = "flex";
-        const inp = document.getElementById("inp-gmail-address");
-        if (inp) {
-          inp.value = "";
-          setTimeout(() => inp.focus(), 150);
-        }
+    function showAuthPage() {
+      const page = document.getElementById("auth-page");
+      if (page) {
+        page.style.display = "flex";
+        setTimeout(() => {
+          const inp = document.getElementById("auth-inp-gmail");
+          if (inp) inp.focus();
+        }, 150);
       }
     }
 
-    function closeGmailLoginModal() {
-      const modal = document.getElementById("gmail-login-modal");
-      if (modal) modal.style.display = "none";
+    function hideAuthPage() {
+      const page = document.getElementById("auth-page");
+      if (page) page.style.display = "none";
+      const oldModal = document.getElementById("welcome-screen-modal");
+      if (oldModal) oldModal.style.display = "none";
+      const gModal = document.getElementById("gmail-login-modal");
+      if (gModal) gModal.style.display = "none";
     }
 
-    function confirmGmailLogin() {
-      const inp = document.getElementById("inp-gmail-address");
+    function switchAuthTab(tab) {
+      document.querySelectorAll(".auth-tab-btn").forEach(btn => btn.classList.remove("active"));
+      document.querySelectorAll(".auth-panel").forEach(p => p.style.display = "none");
+
+      const btn = document.getElementById(`tab-btn-${tab}`);
+      if (btn) btn.classList.add("active");
+      const panel = document.getElementById(`auth-panel-${tab}`);
+      if (panel) panel.style.display = "flex";
+
+      if (tab === "gmail") {
+        const inp = document.getElementById("auth-inp-gmail");
+        if (inp) setTimeout(() => inp.focus(), 100);
+      } else if (tab === "phone") {
+        const inp = document.getElementById("auth-inp-phone");
+        if (inp) setTimeout(() => inp.focus(), 100);
+      } else if (tab === "custom") {
+        const inp = document.getElementById("auth-inp-custom");
+        if (inp) setTimeout(() => inp.focus(), 100);
+      }
+    }
+
+    function quickFillGmail(email) {
+      const inp = document.getElementById("auth-inp-gmail");
+      if (inp) {
+        inp.value = email;
+        inp.focus();
+      }
+    }
+
+    function quickAppendGmailDomain() {
+      const inp = document.getElementById("auth-inp-gmail");
+      if (!inp) return;
+      let val = inp.value.trim();
+      if (!val) {
+        inp.value = "@gmail.com";
+        inp.setSelectionRange(0, 0);
+      } else if (!val.includes("@")) {
+        inp.value = val + "@gmail.com";
+      }
+      inp.focus();
+    }
+
+    function submitAuthGmail() {
+      const inp = document.getElementById("auth-inp-gmail");
       if (!inp || !inp.value.trim()) {
-        alert("Please enter your Gmail address!");
+        alert("Please enter your Gmail username or address.");
         if (inp) inp.focus();
         return;
       }
@@ -2364,31 +2627,80 @@
         email += "@gmail.com";
       }
       localStorage.setItem("virgo_auth_user", email);
-      closeGmailLoginModal();
+      hideAuthPage();
       initAuthenticatedSession(email);
     }
 
-    function handleWelcomeLogin() {
-      const input = document.getElementById("welcome-inp-user");
-      if (!input || !input.value.trim()) {
-        alert("Please enter a valid phone, email or username!");
-        if (input) input.focus();
+    function submitAuthPhone() {
+      const country = document.getElementById("auth-country-select");
+      const inp = document.getElementById("auth-inp-phone");
+      if (!inp || !inp.value.trim()) {
+        alert("Please enter your phone number.");
+        if (inp) inp.focus();
         return;
       }
-      const clean = input.value.trim().toLowerCase();
+      let raw = inp.value.trim().replace(/[\s\-\(\)]/g, "");
+      let phone = raw;
+      if (country && country.value && !raw.startsWith("+")) {
+        phone = country.value + raw;
+      }
+      localStorage.setItem("virgo_auth_user", phone);
+      hideAuthPage();
+      initAuthenticatedSession(phone);
+    }
+
+    function submitAuthCustom() {
+      const inp = document.getElementById("auth-inp-custom");
+      if (!inp || !inp.value.trim()) {
+        alert("Please enter a username or ID.");
+        if (inp) inp.focus();
+        return;
+      }
+      const clean = inp.value.trim().toLowerCase();
       localStorage.setItem("virgo_auth_user", clean);
+      hideAuthPage();
       initAuthenticatedSession(clean);
+    }
+
+    function showWelcomeScreen() {
+      showAuthPage();
+    }
+
+    function openGmailLoginPrompt() {
+      showAuthPage();
+      switchAuthTab("gmail");
+    }
+
+    function closeGmailLoginModal() {
+      hideAuthPage();
+    }
+
+    function confirmGmailLogin() {
+      submitAuthGmail();
+    }
+
+    function handleWelcomeLogin() {
+      submitAuthGmail();
+    }
+
+    function logout() {
+      if (ws) ws.close();
+      localStorage.removeItem("virgo_auth_user");
+      localStorage.removeItem("virgo_auth_token");
+      location.reload();
     }
 
     async function initAuthenticatedSession(user) {
       myId = normalizeUserId(user);
-      const modal = document.getElementById("welcome-screen-modal");
-      if (modal) modal.style.display = "none";
+      hideAuthPage();
       
       const qBtn = document.getElementById("quick-signin-btn");
       if (qBtn) qBtn.style.display = "none";
       const gBtn = document.getElementById("auth-signin-btn");
       if (gBtn) gBtn.style.display = "none";
+
+      const headerId = document.getElementById("header-my-id-pill");
+      if (headerId) headerId.innerText = myId;
 
       const idEl = document.getElementById("lbl-profile-id");
       if (idEl) idEl.innerText = myId;
@@ -2429,7 +2741,7 @@
       if (savedUser) {
         await initAuthenticatedSession(savedUser);
       } else {
-        showWelcomeScreen();
+        showAuthPage();
       }
     });
 
@@ -4367,26 +4679,6 @@
             console.warn("Voice upload error:", uploadErr);
           }
         };
-
-        mediaRecorder.start();
-
-        document.getElementById("chat-msg-input").style.display = "none";
-        document.getElementById("voice-rec-overlay").style.display = "flex";
-        document.getElementById("btn-mic").style.display = "none";
-
-        recSeconds = 0;
-        document.getElementById("voice-timer").innerText = "00:00";
-        recTimerInterval = setInterval(() => {
-          recSeconds++;
-          const mins = String(Math.floor(recSeconds / 60)).padStart(2, "0");
-          const secs = String(recSeconds % 60).padStart(2, "0");
-          document.getElementById("voice-timer").innerText = `${mins}:${secs}`;
-        }, 1000);
-
-      } catch (err) {
-        alert("Microphone permission required: " + err.message);
-      }
-    }
 
         mediaRecorder.start();
 
