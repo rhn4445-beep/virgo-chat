@@ -227,15 +227,16 @@ public class VirgoForegroundService extends Service {
             if (msgs != null && msgs.length() > 0) {
                 for (int i = 0; i < msgs.length(); i++) {
                     JSONObject m = msgs.getJSONObject(i);
+                    String msgId = m.optString("id", "");
                     String from = m.optString("from", "Virgo Contact");
                     String text = m.optString("text", "New message");
 
-                    Log.d(TAG, "📩 Native Poller received message from " + from + ": " + text);
+                    Log.d(TAG, "📩 Native Poller received message [" + msgId + "] from " + from + ": " + text);
 
                     // Post heads-up notification if app is in background OR user is viewing a different chat
                     boolean inForegroundWithSameUser = isActivityInForeground && MainActivity.currentOpenChat != null && MainActivity.currentOpenChat.equalsIgnoreCase(from);
                     if (!inForegroundWithSameUser) {
-                        postMessageNotification(from, text);
+                        NotificationHelper.postMessageNotification(this, msgId, from, text);
                     }
                 }
             }
@@ -245,66 +246,7 @@ public class VirgoForegroundService extends Service {
     }
 
     public void postMessageNotification(String sender, String message) {
-        try {
-            createMessageNotificationChannel();
-
-            Intent intent = new Intent(this, MainActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            PendingIntent pendingIntent = PendingIntent.getActivity(
-                this,
-                (int) System.currentTimeMillis(),
-                intent,
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
-            );
-
-            // Physical device vibration
-            try {
-                Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                if (vibrator != null && vibrator.hasVibrator()) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        vibrator.vibrate(VibrationEffect.createWaveform(new long[]{0, 250, 150, 250}, -1));
-                    } else {
-                        vibrator.vibrate(new long[]{0, 250, 150, 250}, -1);
-                    }
-                }
-            } catch (Exception ignored) {}
-
-            // Sound chime
-            try {
-                Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                Ringtone ringtone = RingtoneManager.getRingtone(getApplicationContext(), soundUri);
-                if (ringtone != null) ringtone.play();
-            } catch (Exception ignored) {}
-
-            Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, MSG_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_stat_virgo)
-                .setContentTitle(sender)
-                .setContentText(message)
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
-                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-                .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setDefaults(NotificationCompat.DEFAULT_ALL)
-                .setSound(soundUri)
-                .setVibrate(new long[]{0, 250, 150, 250})
-                .setColor(0xFFF5C542)
-                .setAutoCancel(true)
-                .setContentIntent(pendingIntent);
-
-            try {
-                builder.setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
-            } catch (Throwable ignored) {}
-
-            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            if (notificationManager != null) {
-                int notifId = (int) (System.currentTimeMillis() % 100000000);
-                notificationManager.notify(notifId, builder.build());
-                Log.d(TAG, "✅ Native message notification posted: id=" + notifId + " from=" + sender);
-            }
-        } catch (Throwable t) {
-            Log.e(TAG, "Fatal error displaying native notification: " + t.getMessage(), t);
-        }
+        NotificationHelper.postMessageNotification(this, null, sender, message);
     }
 
     @Override

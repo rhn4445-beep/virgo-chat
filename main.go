@@ -40,7 +40,7 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = "v2.7.0"
+var serverBuildTime = "v2.7.1"
 
 func normalizeUserID(raw string) string {
 	s := strings.ToLower(strings.TrimSpace(raw))
@@ -447,10 +447,11 @@ func (h *Hub) run() {
 					}
 				}
 			} else {
-				// 1. UNCONDITIONAL BACKGROUND WAKEUP FOR ANDROID NOTIFICATION POLLERS
+				// 1. UNCONDITIONAL BACKGROUND WAKEUP FOR ANDROID NOTIFICATION POLLERS (DEDUPLICATED)
 				if env.Type == "chat" || env.Type == "media" {
 					normTarget := normalizeUserID(target)
 					variants := []string{target, normTarget, "+91" + normTarget, "91" + normTarget}
+					seenWaiters := make(map[chan []byte]bool)
 					woken := 0
 					for _, v := range variants {
 						if v == "" {
@@ -458,16 +459,19 @@ func (h *Hub) run() {
 						}
 						if waiters, hasWaiters := h.pollWaiters[v]; hasWaiters && len(waiters) > 0 {
 							for ch := range waiters {
-								select {
-								case ch <- message:
-									woken++
-								default:
+								if !seenWaiters[ch] {
+									seenWaiters[ch] = true
+									select {
+									case ch <- message:
+										woken++
+									default:
+									}
 								}
 							}
 						}
 					}
 					if woken > 0 {
-						log.Printf("🚀 Woke up %d background pollers for target '%s'", woken, target)
+						log.Printf("🚀 Woke up %d unique background pollers for target '%s'", woken, target)
 					}
 				}
 
@@ -896,11 +900,15 @@ WHERE (recipient_id = ? OR recipient_id = ? OR recipient_id = ? OR recipient_id 
 
 	// 2. Wait up to 25 seconds for an incoming real-time message
 	notifyChan := make(chan []byte, 5)
-	keys := []string{userId, normID, "91" + normID, "+91" + normID}
-	for _, k := range keys {
-		if k == "" {
-			continue
+	keyMap := make(map[string]bool)
+	for _, k := range []string{userId, normID, "91" + normID, "+91" + normID} {
+		if k != "" {
+			keyMap[k] = true
 		}
+	}
+	var uniqueKeys []string
+	for k := range keyMap {
+		uniqueKeys = append(uniqueKeys, k)
 		if h.pollWaiters[k] == nil {
 			h.pollWaiters[k] = make(map[chan []byte]bool)
 		}
@@ -910,7 +918,7 @@ WHERE (recipient_id = ? OR recipient_id = ? OR recipient_id = ? OR recipient_id 
 
 	defer func() {
 		h.mutex.Lock()
-		for _, k := range keys {
+		for _, k := range uniqueKeys {
 			if m, ok := h.pollWaiters[k]; ok {
 				delete(m, notifyChan)
 				if len(m) == 0 {
@@ -926,6 +934,10 @@ WHERE (recipient_id = ? OR recipient_id = ? OR recipient_id = ? OR recipient_id 
 		var env Envelope
 		text := "💬 New message"
 		if json.Unmarshal(msgData, &env) == nil {
+			// Mark notified in SQLite immediately so any subsequent poll does not re-deliver this message!
+			if env.ID != "" {
+				h.db.Exec(`UPDATE pending_messages SET notified = 1 WHERE id = ?;`, env.ID)
+			}
 			var payloadMap map[string]interface{}
 			if json.Unmarshal(env.Payload, &payloadMap) == nil {
 				if t, ok := payloadMap["text"].(string); ok && t != "" {

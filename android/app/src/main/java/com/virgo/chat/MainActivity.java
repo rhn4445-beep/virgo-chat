@@ -131,9 +131,14 @@ public class MainActivity extends BridgeActivity {
 
                     webView.addJavascriptInterface(new Object() {
                         @JavascriptInterface
+                        public void showNotification(String title, String message, String msgId) {
+                            Log.d(TAG, "showNotification requested from JS: " + title + " - " + message + " (id=" + msgId + ")");
+                            NotificationHelper.postMessageNotification(MainActivity.this, msgId, title, message);
+                        }
+
+                        @JavascriptInterface
                         public void showNotification(String title, String message) {
-                            Log.d(TAG, "showNotification requested from JS: " + title + " - " + message);
-                            displayNativeNotification(title, message);
+                            showNotification(title, message, null);
                         }
 
                         @JavascriptInterface
@@ -255,99 +260,10 @@ public class MainActivity extends BridgeActivity {
     }
 
     private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
-                CharSequence name = "Virgo Messages";
-                String description = "High-priority notifications for incoming Virgo chat messages";
-                int importance = NotificationManager.IMPORTANCE_HIGH;
-                NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
-                channel.setDescription(description);
-                channel.enableVibration(true);
-                channel.setVibrationPattern(new long[]{0, 250, 150, 250});
-                channel.enableLights(true);
-                channel.setLightColor(0xFFF5C542); // Golden celestial accent
-                channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
-                channel.setBypassDnd(true);
-
-                AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_COMMUNICATION_INSTANT)
-                    .build();
-                Uri defaultSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                channel.setSound(defaultSound, audioAttributes);
-
-                NotificationManager notificationManager = getSystemService(NotificationManager.class);
-                if (notificationManager != null) {
-                    notificationManager.createNotificationChannel(channel);
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Error creating notification channel: " + e.getMessage(), e);
-            }
-        }
+        NotificationHelper.createNotificationChannel(this);
     }
 
     private void displayNativeNotification(String title, String message) {
-        try {
-            createNotificationChannel();
-
-            Intent intent = new Intent(this, MainActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            PendingIntent pendingIntent = PendingIntent.getActivity(
-                this, 
-                0, 
-                intent, 
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
-            );
-
-            // Play instant physical vibration on the device
-            try {
-                Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                if (vibrator != null && vibrator.hasVibrator()) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        vibrator.vibrate(VibrationEffect.createWaveform(new long[]{0, 250, 150, 250}, -1));
-                    } else {
-                        vibrator.vibrate(new long[]{0, 250, 150, 250}, -1);
-                    }
-                }
-            } catch (Exception ignored) {}
-
-            // Play instant notification ringtone
-            try {
-                Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                Ringtone ringtone = RingtoneManager.getRingtone(getApplicationContext(), soundUri);
-                if (ringtone != null) {
-                    ringtone.play();
-                }
-            } catch (Exception ignored) {}
-
-            Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_stat_virgo)
-                .setContentTitle(title)
-                .setContentText(message)
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
-                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-                .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setDefaults(NotificationCompat.DEFAULT_ALL)
-                .setSound(soundUri)
-                .setVibrate(new long[]{0, 250, 150, 250})
-                .setColor(0xFFF5C542)
-                .setAutoCancel(true)
-                .setContentIntent(pendingIntent);
-
-            try {
-                builder.setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
-            } catch (Throwable ignored) {}
-
-            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            if (notificationManager != null) {
-                int notifId = (int) (System.currentTimeMillis() % 100000000);
-                notificationManager.notify(notifId, builder.build());
-                Log.d(TAG, "Notification successfully posted: id=" + notifId);
-            }
-        } catch (Throwable t) {
-            Log.e(TAG, "Fatal error displaying notification: " + t.getMessage(), t);
-        }
+        NotificationHelper.postMessageNotification(this, null, title, message);
     }
 }

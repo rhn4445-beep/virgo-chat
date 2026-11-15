@@ -1371,7 +1371,7 @@
     const isLocalDev = !isCapacitor && window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (window.location.port !== "");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = "v2.7.0";
+    let activeClientVersion = "v2.7.1";
     let updateBannerDismissed = false;
 
     // Mobile background lifecycle hooks called from Android MainActivity
@@ -1742,8 +1742,8 @@
       if (myId) connectWebSocket();
     });
 
-    // NOTIFICATION & VIBRATION
-    function triggerDeviceNotification(senderId, snippet) {
+    // NOTIFICATION & VIBRATION (Deduplicated with message ID)
+    function triggerDeviceNotification(senderId, snippet, msgId) {
       const title = "Virgo";
       const cleanSnippet = (snippet || "New message").replace(/<[^>]*>?/gm, '').substring(0, 100);
       const body = `${senderId}: ${cleanSnippet}`;
@@ -1752,13 +1752,10 @@
       if (window.AndroidNative) {
         try {
           if (typeof window.AndroidNative.showNotification === "function") {
-            window.AndroidNative.showNotification(title, body);
+            window.AndroidNative.showNotification(senderId, cleanSnippet, msgId || "");
           }
           if (typeof window.AndroidNative.vibrate === "function") {
-            window.AndroidNative.vibrate(300);
-          }
-          if (typeof window.AndroidNative.playChime === "function") {
-            window.AndroidNative.playChime();
+            window.AndroidNative.vibrate(250);
           }
         } catch(e) {
           console.warn("AndroidNative error:", e);
@@ -2931,7 +2928,7 @@
             }));
           }
         }
-        triggerDeviceNotification(senderId, text);
+        triggerDeviceNotification(senderId, text, safeMsgId);
       }
     }
 
@@ -3012,7 +3009,7 @@
           }
         }
         const mediaLabel = env.payload.mediaType === "audio" ? "Voice note" : (env.payload.mediaType === "video" ? "Video" : "Photo");
-        triggerDeviceNotification(senderId, mediaLabel);
+        triggerDeviceNotification(senderId, mediaLabel, safeMsgId);
       }
     }
 
