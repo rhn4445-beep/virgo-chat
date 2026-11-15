@@ -946,6 +946,286 @@
     .inapp-toast-content { flex: 1; min-width: 0; }
     .inapp-toast-sender { font-size: 13.5px; font-weight: 700; color: var(--virgo-gold-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .inapp-toast-text { font-size: 12px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+
+    /* ATTACHMENT POPUP MENU */
+    .attachment-popup {
+      position: absolute;
+      bottom: 74px;
+      left: 18px;
+      background: rgba(14, 22, 35, 0.96);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--virgo-gold);
+      border-radius: 18px;
+      padding: 10px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), 0 0 16px var(--virgo-gold-glow);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 1000;
+      min-width: 190px;
+      animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes popIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .attach-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .attach-item:hover {
+      background: rgba(245, 197, 66, 0.12);
+    }
+    .attach-item span {
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .attach-icon-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .attach-icon-badge svg {
+      width: 19px;
+      height: 19px;
+      fill: #fff;
+    }
+    .photo-badge { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .doc-badge { background: linear-gradient(135deg, #10b981, #047857); }
+    .cam-badge { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .audio-badge { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+
+    /* MEDIA DISPLAY IN CHAT */
+    .media-container {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .image-wrap img {
+      width: 100%;
+      max-height: 320px;
+      object-fit: cover;
+      border-radius: 12px;
+      cursor: pointer;
+      display: block;
+      transition: opacity 0.2s;
+    }
+    .image-wrap img:hover { opacity: 0.95; }
+    .media-save-floating-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(10, 16, 26, 0.75);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-starlight);
+      color: var(--virgo-gold-bright);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      opacity: 0.85;
+    }
+    .media-save-floating-btn:hover {
+      opacity: 1;
+      transform: scale(1.1);
+      background: rgba(10, 16, 26, 0.95);
+      border-color: var(--virgo-gold);
+    }
+    .media-save-floating-btn svg { width: 17px; height: 17px; fill: currentColor; }
+    .media-save-action-bar {
+      margin-top: 6px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .media-save-pill {
+      background: rgba(245, 197, 66, 0.15);
+      border: 1px solid var(--virgo-gold);
+      color: var(--virgo-gold-bright);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .media-save-pill:hover { background: rgba(245, 197, 66, 0.28); }
+    .media-save-pill svg { width: 14px; height: 14px; fill: currentColor; }
+
+    /* DOCUMENT / FILE CARD IN CHAT */
+    .file-card-bubble {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--virgo-gold);
+      border-radius: 14px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 4px;
+      max-width: 320px;
+    }
+    .file-card-bubble:hover {
+      background: rgba(245, 197, 66, 0.15);
+      border-color: var(--virgo-gold-bright);
+      box-shadow: 0 0 12px var(--virgo-gold-glow);
+    }
+    .file-badge-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--virgo-gold-bright), var(--virgo-gold));
+      color: #06090e;
+      font-weight: 800;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 10px rgba(245, 197, 66, 0.3);
+    }
+    .file-card-details {
+      flex: 1;
+      min-width: 0;
+    }
+    .file-card-name {
+      color: #fff;
+      font-weight: 600;
+      font-size: 13.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-card-sub {
+      color: var(--virgo-gold-bright);
+      font-size: 11px;
+      margin-top: 2px;
+    }
+    .file-card-dl-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--virgo-gold-bright);
+    }
+    .file-card-dl-icon svg { width: 17px; height: 17px; fill: currentColor; }
+
+    /* STORAGE & LOCAL DATABASE MODAL */
+    .storage-modal-content {
+      background: var(--bg-surface);
+      border: 1px solid var(--virgo-gold);
+      border-radius: 22px;
+      width: 90%;
+      max-width: 480px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 24px var(--virgo-gold-glow);
+      animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .storage-hero-card {
+      background: linear-gradient(135deg, rgba(245, 197, 66, 0.15), rgba(20, 31, 50, 0.6));
+      border: 1px solid var(--virgo-gold);
+      border-radius: 16px;
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .storage-hero-card .hero-label {
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+    .storage-hero-card .hero-val {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--virgo-gold-bright);
+      margin: 6px 0;
+      text-shadow: 0 0 16px var(--virgo-gold-glow);
+    }
+    .storage-hero-card .hero-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .storage-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .storage-tile {
+      background: var(--bg-card);
+      border: 1px solid var(--border-starlight);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .tile-icon { font-size: 22px; flex-shrink: 0; }
+    .tile-info { display: flex; flex-direction: column; min-width: 0; }
+    .tile-name { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+    .tile-stat { font-size: 13px; color: #fff; font-weight: 700; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .storage-actions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .btn-storage-action {
+      background: rgba(245, 197, 66, 0.12);
+      border: 1px solid var(--virgo-gold);
+      color: var(--virgo-gold-bright);
+      padding: 11px 16px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+    .btn-storage-action:hover {
+      background: rgba(245, 197, 66, 0.22);
+      border-color: var(--virgo-gold-bright);
+      box-shadow: 0 0 14px var(--virgo-gold-glow);
+    }
+    .btn-storage-action svg { width: 18px; height: 18px; fill: currentColor; }
+    .btn-storage-action.danger {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+    }
+    .btn-storage-action.danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: #ef4444;
+    }
   </style>
 </head>
 <body>
@@ -1020,6 +1300,9 @@
         </button>
         <button class="action-icon-btn" onclick="openNewChatModal()" title="New Chat">
           <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        </button>
+        <button class="action-icon-btn" onclick="openStorageModal()" title="Storage & Local Database">
+          <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
         </button>
         <button class="action-icon-btn" onclick="applyInstantUpdate()" title="Sync & Check for Updates">
           <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
@@ -1147,6 +1430,10 @@
           <div id="lbl-profile-id" style="color:var(--text-muted);font-size:14px;padding:8px 0;">guest@virgo</div>
         </div>
 
+        <button type="button" onclick="openStorageModal()" style="background:rgba(245,197,66,0.12);border:1px solid var(--virgo-gold);border-radius:12px;color:var(--virgo-gold-bright);padding:10px 16px;font-weight:700;font-size:13px;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px;">
+          <span>💾</span> Storage &amp; Local Database
+        </button>
+
         <button type="button" onclick="testDeviceNotification()" style="background:rgba(245,197,66,0.15);border:1px solid var(--virgo-gold);border-radius:12px;color:var(--virgo-gold-bright);padding:10px 16px;font-weight:700;font-size:13px;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px;">
           <span>🔔</span> Test Notifications (Sound &amp; Vibrate)
         </button>
@@ -1198,6 +1485,10 @@
 
           <!-- DROPDOWN -->
           <div class="chat-dropdown" id="chat-context-menu">
+            <div class="dropdown-row" onclick="openStorageModal()">
+              <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+              <span>Storage &amp; Data</span>
+            </div>
             <div class="dropdown-row" onclick="clearActiveChatHistory()">
               <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
               <span>Clear Messages</span>
@@ -1229,6 +1520,34 @@
         <span class="emoji-pill" onclick="insertEmoji('🎉')">🎉</span>
       </div>
 
+      <!-- ATTACHMENT POPUP MENU -->
+      <div id="attachment-popup-menu" class="attachment-popup" style="display:none;">
+        <div class="attach-item" onclick="triggerAttachInput('media')">
+          <div class="attach-icon-badge photo-badge">
+            <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+          </div>
+          <span>Photos &amp; Videos</span>
+        </div>
+        <div class="attach-item" onclick="triggerAttachInput('doc')">
+          <div class="attach-icon-badge doc-badge">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+          </div>
+          <span>Document / Any File</span>
+        </div>
+        <div class="attach-item" onclick="triggerAttachInput('camera')">
+          <div class="attach-icon-badge cam-badge">
+            <svg viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+          </div>
+          <span>Camera</span>
+        </div>
+        <div class="attach-item" onclick="triggerAttachInput('audio')">
+          <div class="attach-icon-badge audio-badge">
+            <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+          </div>
+          <span>Audio File</span>
+        </div>
+      </div>
+
       <!-- FLOATING INPUT CAPSULE BAR -->
       <div class="input-bar-container">
         <div class="floating-capsule">
@@ -1236,14 +1555,18 @@
             <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
           </button>
 
-          <button class="capsule-btn" onclick="document.getElementById('file-upload-input').click()" title="Attach File/Media">
+          <button class="capsule-btn" onclick="toggleAttachmentPopup(event)" title="Attach File/Media">
             <svg viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
           </button>
-          <input type="file" id="file-upload-input" style="display:none;" accept="image/*,video/*,audio/*" onchange="handleFileUpload(event)">
 
-          <button class="capsule-btn" onclick="document.getElementById('chat-camera-capture-input').click()" title="Camera">
+          <button class="capsule-btn" onclick="triggerAttachInput('camera')" title="Camera">
             <svg viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
           </button>
+
+          <input type="file" id="file-upload-input" style="display:none;" accept="*/*" onchange="handleFileUpload(event)">
+          <input type="file" id="attach-media-input" style="display:none;" accept="image/*,video/*" onchange="handleFileUpload(event)">
+          <input type="file" id="attach-doc-input" style="display:none;" accept="*/*" onchange="handleFileUpload(event)">
+          <input type="file" id="attach-audio-input" style="display:none;" accept="audio/*" onchange="handleFileUpload(event)">
           <input type="file" id="chat-camera-capture-input" style="display:none;" accept="image/*" capture="environment" onchange="handleFileUpload(event)">
 
           <input type="text" id="chat-msg-input" placeholder="Type a message..." autocomplete="off" onkeydown="if(event.key==='Enter')sendMsg()">
@@ -1364,6 +1687,84 @@
   <input type="file" id="header-camera-input" accept="image/*,video/*" capture="environment" style="display:none;" onchange="handleHeaderMediaCapture(event)">
   <input type="file" id="header-gallery-input" accept="image/*,video/*" style="display:none;" onchange="handleHeaderMediaCapture(event)">
 
+  <!-- STORAGE & DATA VAULT MODAL -->
+  <div id="storage-manager-modal" class="virgo-modal" style="display:none;align-items:center;justify-content:center;">
+    <div class="storage-modal-content">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:24px;">💾</span>
+          <div>
+            <h3 style="color:#fff;font-size:17px;font-weight:700;margin:0;">Local Storage &amp; Database</h3>
+            <p style="color:var(--text-muted);font-size:11.5px;margin:2px 0 0;">Offline media cache &amp; persistent IndexedDB</p>
+          </div>
+        </div>
+        <button onclick="closeStorageModal()" style="background:transparent;border:none;color:var(--text-muted);font-size:22px;cursor:pointer;padding:4px 8px;">✕</button>
+      </div>
+
+      <div class="storage-hero-card">
+        <div class="hero-label">Total Local Storage Used</div>
+        <div class="hero-val" id="storage-total-size">Calculating...</div>
+        <div class="hero-sub" id="storage-total-items">Messages, Photos, Videos &amp; Files</div>
+      </div>
+
+      <div class="storage-grid">
+        <div class="storage-tile">
+          <div class="tile-icon">💬</div>
+          <div class="tile-info">
+            <span class="tile-name">Messages</span>
+            <span class="tile-stat" id="stat-messages-count">0 msgs</span>
+          </div>
+        </div>
+        <div class="storage-tile">
+          <div class="tile-icon">📷</div>
+          <div class="tile-info">
+            <span class="tile-name">Photos</span>
+            <span class="tile-stat" id="stat-photos-size">0 KB</span>
+          </div>
+        </div>
+        <div class="storage-tile">
+          <div class="tile-icon">🎥</div>
+          <div class="tile-info">
+            <span class="tile-name">Videos</span>
+            <span class="tile-stat" id="stat-videos-size">0 KB</span>
+          </div>
+        </div>
+        <div class="storage-tile">
+          <div class="tile-icon">🎵</div>
+          <div class="tile-info">
+            <span class="tile-name">Voice Notes</span>
+            <span class="tile-stat" id="stat-audio-size">0 KB</span>
+          </div>
+        </div>
+        <div class="storage-tile">
+          <div class="tile-icon">📄</div>
+          <div class="tile-info">
+            <span class="tile-name">Documents</span>
+            <span class="tile-stat" id="stat-files-size">0 KB</span>
+          </div>
+        </div>
+        <div class="storage-tile">
+          <div class="tile-icon">⚡</div>
+          <div class="tile-info">
+            <span class="tile-name">Offline Vault</span>
+            <span class="tile-stat" id="stat-device-free" style="color:var(--virgo-gold-bright);">Active</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="storage-actions-list">
+        <button class="btn-storage-action" onclick="VirgoStorage.exportBackup()">
+          <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          <span>Export Chat History Backup (.json)</span>
+        </button>
+        <button class="btn-storage-action danger" onclick="confirmClearMediaCache()">
+          <svg viewBox="0 0 24 24"><path d="M15 4V3H9v1H4v2h1v13c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V6h1V4h-5zm2 15H7V6h10v13zM9 8h2v9H9zm4 0h2v9h-2z"/></svg>
+          <span>Clear Media Cache (Frees Disk Space)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- JAVASCRIPT CORE LOGIC -->
   <script>
     // AUTOMATIC HOST SELECTION
@@ -1371,7 +1772,7 @@
     const isLocalDev = !isCapacitor && window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (window.location.port !== "");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = "v2.7.1";
+    let activeClientVersion = "v2.8.0";
     let updateBannerDismissed = false;
 
     // Mobile background lifecycle hooks called from Android MainActivity
@@ -1575,6 +1976,7 @@
     let db = null;
     let myKeyPair = null;
     const sharedKeys = {}; // peerId -> CryptoKey
+    const peerJwkFingerprints = {}; // peerId -> stringified JWK
     let unreadCounts = {};
     let pendingCiphertextQueue = [];
     let userPresenceCache = {};
@@ -2194,8 +2596,17 @@
       if (!peerId || !peerJwk || !myKeyPair) return;
       try {
         const target = peerId.toLowerCase().trim();
+        const normTarget = normalizeUserId(target);
+        const jwkStr = typeof peerJwk === "string" ? peerJwk : JSON.stringify(peerJwk);
+
+        // Avoid expensive re-derivation if key is already derived for this exact JWK
+        if (sharedKeys[target] && peerJwkFingerprints[target] === jwkStr) {
+          return sharedKeys[target];
+        }
+
         await savePeerPublicKey(target, peerJwk);
-        const peerKey = await window.crypto.subtle.importKey("jwk", peerJwk, { name: "ECDH", namedCurve: "P-256" }, true, []);
+        const importedJwk = typeof peerJwk === "string" ? JSON.parse(peerJwk) : peerJwk;
+        const peerKey = await window.crypto.subtle.importKey("jwk", importedJwk, { name: "ECDH", namedCurve: "P-256" }, true, []);
         const derived = await window.crypto.subtle.deriveKey(
           { name: "ECDH", public: peerKey },
           myKeyPair.privateKey,
@@ -2204,15 +2615,34 @@
           ["encrypt", "decrypt"]
         );
         sharedKeys[target] = derived;
-        const normTarget = normalizeUserId(target);
         if (normTarget) sharedKeys[normTarget] = derived;
+        peerJwkFingerprints[target] = jwkStr;
+        if (normTarget) peerJwkFingerprints[normTarget] = jwkStr;
 
+        // Drain pendingCiphertextQueue non-recursively (clear queue first to avoid mutual recursion!)
         if (pendingCiphertextQueue.length > 0) {
+          const queueToProcess = [...pendingCiphertextQueue];
+          pendingCiphertextQueue = [];
           const remaining = [];
-          for (const item of pendingCiphertextQueue) {
-            if (isSameUser(item.from, target)) {
-              if (item.type === "chat") await processInboundChatMessage(item);
-              else if (item.type === "media") await processInboundMediaMessage(item);
+          for (const item of queueToProcess) {
+            if (isSameUser(item.from, target) && item.payload && item.payload.ciphertext && item.payload.iv) {
+              try {
+                const plain = await decryptPayload(target, item.payload.ciphertext, item.payload.iv);
+                if (plain) {
+                  // Update DOM bubble text in-place
+                  const bubble = document.getElementById(`msg-wrap-${item.id}`);
+                  if (bubble) {
+                    const textEl = bubble.querySelector(".msg-text");
+                    if (textEl) textEl.innerText = plain;
+                  }
+                  // Update DB record
+                  await updateMessageContentInDB(item.id, plain);
+                } else {
+                  remaining.push(item);
+                }
+              } catch(e) {
+                remaining.push(item);
+              }
             } else {
               remaining.push(item);
             }
@@ -2220,33 +2650,78 @@
           pendingCiphertextQueue = remaining;
         }
 
-        // Retroactively decrypt any stored encrypted messages for this peer
+        // Retroactively decrypt any stored encrypted messages for this peer safely without transaction timeout
         try {
           const db = await getDB();
           if (db) {
-            const tx = db.transaction("messages", "readwrite");
-            const store = tx.objectStore("messages");
-            const req = store.getAll();
-            req.onsuccess = async () => {
-              const msgs = (req.result || []).filter(m => isSameUser(m.chatWith, target) && m.ciphertext && m.iv);
-              let anyUpdated = false;
-              for (const m of msgs) {
+            const allMsgs = await new Promise((resolve) => {
+              const tx = db.transaction("messages", "readonly");
+              const store = tx.objectStore("messages");
+              const req = store.getAll();
+              req.onsuccess = () => resolve(req.result || []);
+              req.onerror = () => resolve([]);
+            });
+
+            const msgsToDecrypt = allMsgs.filter(m => isSameUser(m.chatWith, target) && m.ciphertext && m.iv && (!m.content || m.content.includes("Encrypted Message")));
+            if (msgsToDecrypt.length > 0) {
+              const decryptedList = [];
+              for (const m of msgsToDecrypt) {
                 try {
                   const plain = await decryptPayload(target, m.ciphertext, m.iv);
                   if (plain && plain !== m.content) {
                     m.content = plain;
-                    store.put(m);
-                    anyUpdated = true;
+                    decryptedList.push(m);
                   }
                 } catch(err) {}
               }
-              if (anyUpdated && isSameUser(target, activeChatId)) {
-                loadChatHistory();
+
+              if (decryptedList.length > 0) {
+                const writeTx = db.transaction("messages", "readwrite");
+                const writeStore = writeTx.objectStore("messages");
+                for (const updatedMsg of decryptedList) {
+                  writeStore.put(updatedMsg);
+                  const bubble = document.getElementById(`msg-wrap-${updatedMsg.id}`);
+                  if (bubble) {
+                    const textEl = bubble.querySelector(".msg-text");
+                    if (textEl) textEl.innerText = updatedMsg.content;
+                  }
+                }
+                if (isSameUser(target, activeChatId)) {
+                  refreshSidebarContacts();
+                }
               }
-            };
+            }
           }
-        } catch(e) {}
-      } catch (e) {}
+        } catch(e) {
+          console.warn("Retroactive decryption error:", e);
+        }
+      } catch (e) {
+        console.warn("deriveSharedKey error:", e);
+      }
+    }
+
+    async function updateMessageContentInDB(msgId, newContent) {
+      if (!msgId || !newContent) return false;
+      try {
+        const db = await getDB();
+        if (!db) return false;
+        return new Promise((resolve) => {
+          const tx = db.transaction("messages", "readwrite");
+          const store = tx.objectStore("messages");
+          const req = store.get(msgId);
+          req.onsuccess = () => {
+            const m = req.result;
+            if (m) {
+              m.content = newContent;
+              store.put(m);
+            }
+            resolve(true);
+          };
+          req.onerror = () => resolve(false);
+        });
+      } catch(e) {
+        return false;
+      }
     }
 
     async function encryptText(peerId, plaintext) {
@@ -2293,16 +2768,51 @@
       return dbInitPromise;
     }
 
+    const VIRGO_DB_VERSION = 14;
+
     function initDB() {
       return new Promise((resolve) => {
         try {
           const safeId = (myId || "guest").replace(/[^a-zA-Z0-9]/g, "_");
-          const request = indexedDB.open("VirgoDB_" + safeId, 12);
+          const request = indexedDB.open("VirgoDB_" + safeId, VIRGO_DB_VERSION);
           request.onupgradeneeded = (e) => {
             const d = e.target.result;
+            // 1. Messages Store
+            let msgStore;
             if (!d.objectStoreNames.contains("messages")) {
-              const store = d.createObjectStore("messages", { keyPath: "id" });
-              store.createIndex("chatWith", "chatWith", { unique: false });
+              msgStore = d.createObjectStore("messages", { keyPath: "id" });
+              msgStore.createIndex("chatWith", "chatWith", { unique: false });
+            } else {
+              msgStore = e.target.transaction.objectStore("messages");
+            }
+            if (!msgStore.indexNames.contains("timestamp")) {
+              msgStore.createIndex("timestamp", "timestamp", { unique: false });
+            }
+            if (!msgStore.indexNames.contains("mediaType")) {
+              msgStore.createIndex("mediaType", "mediaType", { unique: false });
+            }
+
+            // 2. Media Vault Store (Binary Blobs for Images, Videos, Voice Notes & Documents)
+            if (!d.objectStoreNames.contains("media_vault")) {
+              const mediaStore = d.createObjectStore("media_vault", { keyPath: "id" });
+              mediaStore.createIndex("msgId", "msgId", { unique: false });
+              mediaStore.createIndex("mediaType", "mediaType", { unique: false });
+              mediaStore.createIndex("timestamp", "timestamp", { unique: false });
+            }
+
+            // 3. Contacts & Profiles Cache Store
+            if (!d.objectStoreNames.contains("contacts")) {
+              d.createObjectStore("contacts", { keyPath: "userId" });
+            }
+
+            // 4. Conversations Metadata Store
+            if (!d.objectStoreNames.contains("conversations")) {
+              d.createObjectStore("conversations", { keyPath: "peerId" });
+            }
+
+            // 5. App Settings & Sync State Store
+            if (!d.objectStoreNames.contains("app_settings")) {
+              d.createObjectStore("app_settings", { keyPath: "key" });
             }
           };
           request.onsuccess = (e) => {
@@ -2341,6 +2851,348 @@
         console.warn("saveMessageToLocal error:", e);
       }
     }
+
+    // VIRGO LOCAL STORAGE & MEDIA VAULT ENGINE
+    const VirgoStorage = {
+      blobUrlCache: new Map(),
+
+      // Save raw blob/file into local media_vault
+      async saveMedia(key, blob, metadata = {}) {
+        if (!key || !blob) return null;
+        try {
+          const database = await getDB();
+          if (!database || !database.objectStoreNames.contains("media_vault")) return null;
+
+          const record = {
+            id: String(key),
+            msgId: metadata.msgId || "",
+            fileName: metadata.fileName || "attachment",
+            fileType: metadata.fileType || blob.type || "application/octet-stream",
+            fileSize: metadata.fileSize || blob.size || 0,
+            mediaType: metadata.mediaType || "file",
+            blob: blob,
+            timestamp: metadata.timestamp || Date.now()
+          };
+
+          return new Promise((resolve) => {
+            const tx = database.transaction("media_vault", "readwrite");
+            tx.objectStore("media_vault").put(record);
+            tx.oncomplete = () => {
+              const blobUrl = URL.createObjectURL(blob);
+              VirgoStorage.blobUrlCache.set(String(key), blobUrl);
+              if (record.msgId) VirgoStorage.blobUrlCache.set(record.msgId, blobUrl);
+              resolve(blobUrl);
+            };
+            tx.onerror = () => resolve(null);
+          });
+        } catch (e) {
+          console.warn("VirgoStorage.saveMedia error:", e);
+          return null;
+        }
+      },
+
+      // Retrieve media blob or object URL from local vault
+      async getMedia(key) {
+        if (!key) return null;
+        const strKey = String(key);
+        if (VirgoStorage.blobUrlCache.has(strKey)) {
+          return { url: VirgoStorage.blobUrlCache.get(strKey), cached: true };
+        }
+        try {
+          const database = await getDB();
+          if (!database || !database.objectStoreNames.contains("media_vault")) return null;
+
+          return new Promise((resolve) => {
+            const tx = database.transaction("media_vault", "readonly");
+            const req = tx.objectStore("media_vault").get(strKey);
+            req.onsuccess = () => {
+              const rec = req.result;
+              if (rec && rec.blob) {
+                const url = URL.createObjectURL(rec.blob);
+                VirgoStorage.blobUrlCache.set(strKey, url);
+                if (rec.msgId) VirgoStorage.blobUrlCache.set(rec.msgId, url);
+                resolve({ url, blob: rec.blob, metadata: rec, cached: true });
+              } else {
+                resolve(null);
+              }
+            };
+            req.onerror = () => resolve(null);
+          });
+        } catch (e) {
+          return null;
+        }
+      },
+
+      // Background download and local cache of remote media
+      async cacheRemoteMedia(remoteUrl, msgId, mediaType, fileName, fileSize) {
+        if (!remoteUrl || remoteUrl.startsWith("blob:") || remoteUrl.startsWith("data:")) return remoteUrl;
+        const existing = await VirgoStorage.getMedia(remoteUrl);
+        if (existing && existing.url) return existing.url;
+
+        try {
+          const res = await fetch(remoteUrl);
+          if (!res.ok) return remoteUrl;
+          const blob = await res.blob();
+          const localUrl = await VirgoStorage.saveMedia(remoteUrl, blob, {
+            msgId: msgId || "",
+            fileName: fileName || extractFileName(remoteUrl),
+            fileType: blob.type,
+            fileSize: fileSize || blob.size,
+            mediaType: mediaType || "file"
+          });
+          return localUrl || remoteUrl;
+        } catch (err) {
+          console.warn("Background media caching failed:", err);
+          return remoteUrl;
+        }
+      },
+
+      // Save to device Downloads / Files
+      async saveFileToDevice(keyOrUrl, fileName, mimeType) {
+        try {
+          let blob = null;
+          const local = await VirgoStorage.getMedia(keyOrUrl);
+          if (local && local.blob) {
+            blob = local.blob;
+          } else if (keyOrUrl && (keyOrUrl.startsWith("blob:") || keyOrUrl.startsWith("http"))) {
+            const res = await fetch(keyOrUrl);
+            blob = await res.blob();
+          }
+
+          if (!blob) {
+            alert("File not ready yet. Please try again.");
+            return;
+          }
+
+          const safeName = fileName || extractFileName(keyOrUrl) || "virgo_download";
+          const safeMime = mimeType || blob.type || "application/octet-stream";
+
+          if (window.AndroidNative && typeof window.AndroidNative.saveFileToDownloads === "function") {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64 = reader.result.split(",")[1];
+              window.AndroidNative.saveFileToDownloads(safeName, base64, safeMime);
+            };
+            reader.readAsDataURL(blob);
+          } else {
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = blobUrl;
+            a.download = safeName;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+              document.body.removeChild(a);
+              URL.revokeObjectURL(blobUrl);
+            }, 1000);
+          }
+        } catch (err) {
+          console.error("saveFileToDevice error:", err);
+          alert("Save failed: " + err.message);
+        }
+      },
+
+      // Calculate detailed storage usage
+      async getStorageStats() {
+        const stats = {
+          messagesCount: 0,
+          photosCount: 0, photosBytes: 0,
+          videosCount: 0, videosBytes: 0,
+          audioCount: 0, audioBytes: 0,
+          filesCount: 0, filesBytes: 0,
+          totalVaultBytes: 0
+        };
+
+        try {
+          const database = await getDB();
+          if (!database) return stats;
+
+          // 1. Messages count
+          await new Promise((res) => {
+            const tx = database.transaction("messages", "readonly");
+            const req = tx.objectStore("messages").count();
+            req.onsuccess = () => { stats.messagesCount = req.result || 0; res(); };
+            req.onerror = () => res();
+          });
+
+          // 2. Media vault breakdown
+          if (database.objectStoreNames.contains("media_vault")) {
+            await new Promise((res) => {
+              const tx = database.transaction("media_vault", "readonly");
+              const req = tx.objectStore("media_vault").getAll();
+              req.onsuccess = () => {
+                const records = req.result || [];
+                records.forEach(r => {
+                  const sz = (r.blob && r.blob.size) ? r.blob.size : (r.fileSize || 0);
+                  stats.totalVaultBytes += sz;
+                  if (r.mediaType === "image") { stats.photosCount++; stats.photosBytes += sz; }
+                  else if (r.mediaType === "video") { stats.videosCount++; stats.videosBytes += sz; }
+                  else if (r.mediaType === "audio") { stats.audioCount++; stats.audioBytes += sz; }
+                  else { stats.filesCount++; stats.filesBytes += sz; }
+                });
+                res();
+              };
+              req.onerror = () => res();
+            });
+          }
+        } catch (e) {}
+
+        return stats;
+      },
+
+      // Clear media cache to free space
+      async clearMediaCache() {
+        try {
+          const database = await getDB();
+          if (!database || !database.objectStoreNames.contains("media_vault")) return true;
+
+          return new Promise((res) => {
+            const tx = database.transaction("media_vault", "readwrite");
+            tx.objectStore("media_vault").clear();
+            tx.oncomplete = () => {
+              VirgoStorage.blobUrlCache.forEach(url => URL.revokeObjectURL(url));
+              VirgoStorage.blobUrlCache.clear();
+              res(true);
+            };
+            tx.onerror = () => res(false);
+          });
+        } catch (e) {
+          return false;
+        }
+      },
+
+      // Export full JSON backup
+      async exportBackup() {
+        try {
+          const database = await getDB();
+          if (!database) return;
+          const tx = database.transaction("messages", "readonly");
+          const req = tx.objectStore("messages").getAll();
+          req.onsuccess = () => {
+            const msgs = req.result || [];
+            const backupData = {
+              app: "Virgo Messenger",
+              exportedAt: new Date().toISOString(),
+              userId: myId,
+              totalMessages: msgs.length,
+              messages: msgs
+            };
+            const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Virgo_Backup_${myId}_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }, 1000);
+          };
+        } catch (e) {
+          alert("Backup error: " + e.message);
+        }
+      }
+    };
+
+    // STORAGE MODAL CONTROLLERS
+    async function openStorageModal() {
+      const modal = document.getElementById("storage-manager-modal");
+      if (modal) modal.style.display = "flex";
+      await refreshStorageStats();
+    }
+
+    function closeStorageModal() {
+      const modal = document.getElementById("storage-manager-modal");
+      if (modal) modal.style.display = "none";
+    }
+
+    async function refreshStorageStats() {
+      const totalSizeEl = document.getElementById("storage-total-size");
+      const totalItemsEl = document.getElementById("storage-total-items");
+      if (totalSizeEl) totalSizeEl.innerText = "Calculating...";
+
+      const stats = await VirgoStorage.getStorageStats();
+      if (totalSizeEl) totalSizeEl.innerText = formatBytes(stats.totalVaultBytes);
+      if (totalItemsEl) totalItemsEl.innerText = `${stats.messagesCount} Messages • ${stats.photosCount + stats.videosCount + stats.audioCount + stats.filesCount} Media Items`;
+
+      const msgCountEl = document.getElementById("stat-messages-count");
+      if (msgCountEl) msgCountEl.innerText = `${stats.messagesCount} msgs`;
+
+      const photosEl = document.getElementById("stat-photos-size");
+      if (photosEl) photosEl.innerText = `${formatBytes(stats.photosBytes)} (${stats.photosCount})`;
+
+      const videosEl = document.getElementById("stat-videos-size");
+      if (videosEl) videosEl.innerText = `${formatBytes(stats.videosBytes)} (${stats.videosCount})`;
+
+      const audioEl = document.getElementById("stat-audio-size");
+      if (audioEl) audioEl.innerText = `${formatBytes(stats.audioBytes)} (${stats.audioCount})`;
+
+      const filesEl = document.getElementById("stat-files-size");
+      if (filesEl) filesEl.innerText = `${formatBytes(stats.filesBytes)} (${stats.filesCount})`;
+    }
+
+    async function confirmClearMediaCache() {
+      if (!confirm("Are you sure you want to clear the local media cache? Your text messages will not be deleted, and media can still be re-downloaded.")) return;
+      const ok = await VirgoStorage.clearMediaCache();
+      if (ok) {
+        alert("Local media cache cleared successfully!");
+        refreshStorageStats();
+      }
+    }
+
+    // UTILITIES
+    function formatBytes(bytes) {
+      if (!bytes || bytes <= 0) return "0 B";
+      const k = 1024;
+      const sizes = ["B", "KB", "MB", "GB"];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+    }
+
+    function extractFileName(urlOrPath) {
+      if (!urlOrPath) return "attachment";
+      try {
+        const parts = urlOrPath.split("/");
+        let last = parts[parts.length - 1];
+        if (last.includes("?")) last = last.split("?")[0];
+        return decodeURIComponent(last) || "attachment";
+      } catch (e) {
+        return "attachment";
+      }
+    }
+
+    // ATTACHMENT POPUP CONTROLLERS
+    function toggleAttachmentPopup(e) {
+      if (e) e.stopPropagation();
+      const m = document.getElementById("attachment-popup-menu");
+      if (m) m.style.display = m.style.display === "flex" ? "none" : "flex";
+    }
+
+    function triggerAttachInput(type) {
+      const m = document.getElementById("attachment-popup-menu");
+      if (m) m.style.display = "none";
+      if (type === 'media') {
+        const inp = document.getElementById('attach-media-input');
+        if (inp) inp.click();
+      } else if (type === 'doc') {
+        const inp = document.getElementById('attach-doc-input');
+        if (inp) inp.click();
+      } else if (type === 'camera') {
+        const inp = document.getElementById('chat-camera-capture-input');
+        if (inp) inp.click();
+      } else if (type === 'audio') {
+        const inp = document.getElementById('attach-audio-input');
+        if (inp) inp.click();
+      }
+    }
+
+    document.addEventListener("click", (e) => {
+      const m = document.getElementById("attachment-popup-menu");
+      if (m && !e.target.closest("#attachment-popup-menu") && !e.target.closest(".capsule-btn")) {
+        m.style.display = "none";
+      }
+    });
 
     async function refreshSidebarContacts() {
       const database = await getDB();
@@ -2666,11 +3518,22 @@
         const store = tx.objectStore("messages");
         const req = store.getAll();
 
-        req.onsuccess = () => {
+        req.onsuccess = async () => {
           const allMsgs = req.result || [];
           const msgs = allMsgs.filter(m => isSameUser(m.chatWith, activeChatId));
           msgs.sort((a, b) => a.timestamp - b.timestamp);
-          msgs.forEach(m => displayMessage(m.content, m.direction, m.id, m.mediaType, m.timestamp, m.status));
+          for (const m of msgs) {
+            let displayContent = m.content;
+            if (m.mediaType) {
+              const cached = await VirgoStorage.getMedia(m.content || m.id);
+              if (cached && cached.url) {
+                displayContent = cached.url;
+              } else if (m.content && m.content.startsWith("http")) {
+                VirgoStorage.cacheRemoteMedia(m.content, m.id, m.mediaType, m.fileName, m.fileSize);
+              }
+            }
+            displayMessage(displayContent, m.direction, m.id, m.mediaType, m.timestamp, m.status, m.fileName, m.fileSize);
+          }
         };
       } catch(e) {
         console.warn("loadChatHistory error:", e);
@@ -2836,6 +3699,21 @@
           console.error("Decryption failed:", err);
         }
 
+        // If decryption failed with cached key, force re-deriving from attached public key if available
+        if (!text && inboundPeerPub) {
+          try {
+            delete peerJwkFingerprints[senderId];
+            const normKey = normalizeUserId(senderId);
+            if (normKey) delete peerJwkFingerprints[normKey];
+            await deriveSharedKey(inboundPeerPub, senderId);
+            if (sharedKeys[senderId]) {
+              text = await decryptPayload(senderId, env.payload.ciphertext, env.payload.iv);
+            }
+          } catch(retryErr) {
+            console.warn("Decryption retry failed:", retryErr);
+          }
+        }
+
         if (!text) {
           text = (env.payload && env.payload.text) ? env.payload.text : "🔐 [Encrypted Message]";
           if (!pendingCiphertextQueue.some(i => i.id === safeMsgId)) {
@@ -2942,8 +3820,30 @@
       if (mediaUrl && mediaUrl.startsWith("/")) {
         mediaUrl = BACKEND_BASE + mediaUrl;
       }
+      const mediaType = env.payload.mediaType || "image";
+      const fileName = env.payload.fileName || extractFileName(mediaUrl);
+      const fileSize = env.payload.fileSize || 0;
 
       playMessageChime();
+
+      // Check if already in local vault, or cache it in background
+      let displayUrl = mediaUrl;
+      const cached = await VirgoStorage.getMedia(mediaUrl);
+      if (cached && cached.url) {
+        displayUrl = cached.url;
+      } else {
+        // Start background cache to local database
+        VirgoStorage.cacheRemoteMedia(mediaUrl, safeMsgId, mediaType, fileName, fileSize).then(localUrl => {
+          if (localUrl && localUrl !== mediaUrl) {
+            const imgEl = document.getElementById(`img-${safeMsgId}`);
+            if (imgEl) imgEl.src = localUrl;
+            const vidEl = document.getElementById(`vid-${safeMsgId}`);
+            if (vidEl) vidEl.src = localUrl;
+            const audEl = document.getElementById(`aud-${safeMsgId}`);
+            if (audEl) audEl.src = localUrl;
+          }
+        });
+      }
 
       try {
         saveMessageToLocal({
@@ -2952,7 +3852,9 @@
           from: senderId,
           content: mediaUrl,
           direction: "received",
-          mediaType: env.payload.mediaType,
+          mediaType: mediaType,
+          fileName: fileName,
+          fileSize: fileSize,
           timestamp: env.timestamp || Date.now()
         });
       } catch(e) {
@@ -2965,7 +3867,7 @@
       const isVisibleInActiveChat = isSameUser(senderId, activeChatId) && isAppForeground;
 
       if (isVisibleInActiveChat) {
-        displayMessage(mediaUrl, "received", safeMsgId, env.payload.mediaType, env.timestamp);
+        displayMessage(displayUrl, "received", safeMsgId, mediaType, env.timestamp, null, fileName, fileSize);
         if (window.AndroidNative && typeof window.AndroidNative.vibrate === "function") {
           window.AndroidNative.vibrate(150);
         }
@@ -2980,7 +3882,7 @@
         }
       } else {
         if (isSameUser(senderId, activeChatId)) {
-          displayMessage(mediaUrl, "received", safeMsgId, env.payload.mediaType, env.timestamp);
+          displayMessage(displayUrl, "received", safeMsgId, mediaType, env.timestamp, null, fileName, fileSize);
           if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
               id: safeMsgId,
@@ -2997,7 +3899,11 @@
             unreadCounts[normKey] = (unreadCounts[normKey] || 0) + 1;
           }
           refreshSidebarContacts();
-          showInAppNotificationBanner(senderId, "📷 Media");
+          let notifText = "📷 Photo";
+          if (mediaType === "audio") notifText = "🎵 Voice note";
+          else if (mediaType === "video") notifText = "🎥 Video";
+          else if (mediaType === "file") notifText = "📄 Document: " + fileName;
+          showInAppNotificationBanner(senderId, notifText);
           if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
               id: safeMsgId,
@@ -3008,7 +3914,10 @@
             }));
           }
         }
-        const mediaLabel = env.payload.mediaType === "audio" ? "Voice note" : (env.payload.mediaType === "video" ? "Video" : "Photo");
+        let mediaLabel = "Photo";
+        if (mediaType === "audio") mediaLabel = "Voice note";
+        else if (mediaType === "video") mediaLabel = "Video";
+        else if (mediaType === "file") mediaLabel = "Document: " + fileName;
         triggerDeviceNotification(senderId, mediaLabel, safeMsgId);
       }
     }
@@ -3082,17 +3991,31 @@
       }
     }
 
-    function displayMessage(content, direction, msgId, mediaType, timestamp, status) {
+    function displayMessage(content, direction, msgId, mediaType, timestamp, status, fileName, fileSize) {
       const box = document.getElementById("messages-viewport");
-      const div = document.createElement("div");
-      div.className = `msg-bubble ${direction}`;
+      if (!box) return;
+
+      let div = document.getElementById(`msg-wrap-${msgId}`);
+      const isExisting = !!div;
+      if (!div) {
+        div = document.createElement("div");
+        div.id = `msg-wrap-${msgId}`;
+        div.className = `msg-bubble ${direction}`;
+      }
 
       const timeStr = new Date(timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const tickSpan = direction === 'sent' ? `<span id="tick-${msgId}">${getTickHtml(status || 'sent')}</span>` : '';
+      const safeName = fileName || extractFileName(content) || "file";
+      const formattedSize = fileSize ? formatBytes(fileSize) : "";
 
       if (mediaType === "image") {
         div.innerHTML = `
-          <img src="${content}" onclick="openImageModal(this.src)" alt="Photo">
+          <div class="media-container image-wrap">
+            <img id="img-${msgId}" src="${content}" onclick="openImageModal(this.src, '${msgId}', '${safeName}')" alt="Photo" loading="lazy">
+            <button class="media-save-floating-btn" onclick="event.stopPropagation(); VirgoStorage.saveFileToDevice('${content}', '${safeName}', 'image/jpeg')" title="Save image to device">
+              <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+            </button>
+          </div>
           <div class="bubble-meta">
             <span>${timeStr}</span>
             ${tickSpan}
@@ -3100,7 +4023,15 @@
         `;
       } else if (mediaType === "video") {
         div.innerHTML = `
-          <video controls src="${content}" style="max-width:100%;border-radius:12px;display:block;margin-bottom:4px;"></video>
+          <div class="media-container video-wrap">
+            <video id="vid-${msgId}" controls src="${content}" preload="metadata" style="max-width:100%;border-radius:12px;display:block;margin-bottom:4px;"></video>
+            <div class="media-save-action-bar">
+              <button class="media-save-pill" onclick="VirgoStorage.saveFileToDevice('${content}', '${safeName}', 'video/mp4')">
+                <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                <span>Save Video</span>
+              </button>
+            </div>
+          </div>
           <div class="bubble-meta">
             <span>${timeStr}</span>
             ${tickSpan}
@@ -3108,7 +4039,27 @@
         `;
       } else if (mediaType === "audio") {
         div.innerHTML = `
-          <audio controls src="${content}"></audio>
+          <div class="media-container audio-wrap">
+            <audio id="aud-${msgId}" controls src="${content}" preload="metadata"></audio>
+          </div>
+          <div class="bubble-meta">
+            <span>${timeStr}</span>
+            ${tickSpan}
+          </div>
+        `;
+      } else if (mediaType === "file") {
+        const ext = safeName.includes('.') ? safeName.split('.').pop().toUpperCase() : 'FILE';
+        div.innerHTML = `
+          <div class="file-card-bubble" onclick="VirgoStorage.saveFileToDevice('${content}', '${safeName}', 'application/octet-stream')">
+            <div class="file-badge-icon">${ext.slice(0, 4)}</div>
+            <div class="file-card-details">
+              <div class="file-card-name" title="${safeName}">${safeName}</div>
+              <div class="file-card-sub">${formattedSize ? formattedSize + ' • ' : ''}Tap to Save / Download</div>
+            </div>
+            <div class="file-card-dl-icon">
+              <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            </div>
+          </div>
           <div class="bubble-meta">
             <span>${timeStr}</span>
             ${tickSpan}
@@ -3119,7 +4070,7 @@
         const escaped = safeContent.replace(/</g, "&lt;").replace(/>/g, "&gt;");
         const linked = escaped.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:var(--virgo-gold-bright);text-decoration:underline;">$1</a>');
         div.innerHTML = `
-          <span>${linked}</span>
+          <span class="msg-text">${linked}</span>
           <div class="bubble-meta">
             <span>${timeStr}</span>
             ${tickSpan}
@@ -3127,52 +4078,105 @@
         `;
       }
 
-      box.appendChild(div);
+      if (!isExisting) {
+        box.appendChild(div);
+      }
       box.scrollTop = box.scrollHeight;
     }
 
-    // PHOTO & CAMERA UPLOAD
+    // PHOTO, VIDEO & DOCUMENT UPLOAD WITH INSTANT LOCAL CACHING
     async function uploadAndSendMediaFile(file, targetId) {
       if (!file || !targetId) return;
 
+      const msgId = "media-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5);
+      const isPhoto = file.type.startsWith("image/");
+      const isVideo = file.type.startsWith("video/");
+      const isAudio = file.type.startsWith("audio/");
+      const mediaType = isAudio ? "audio" : (isVideo ? "video" : (isPhoto ? "image" : "file"));
+
+      // 1. Immediately create local Blob URL & save to local media_vault database
+      const localBlobUrl = URL.createObjectURL(file);
+      await VirgoStorage.saveMedia(msgId, file, {
+        msgId,
+        fileName: file.name || "attachment",
+        fileType: file.type,
+        fileSize: file.size,
+        mediaType: mediaType
+      });
+
+      const isOnline = ws && ws.readyState === WebSocket.OPEN;
+      const initialStatus = isOnline ? "sending" : "pending";
+
+      // 2. Display instantly in chat viewport with zero delay!
+      displayMessage(localBlobUrl, "sent", msgId, mediaType, Date.now(), initialStatus, file.name, file.size);
+
+      // 3. Save message record in local messages store
+      saveMessageToLocal({
+        id: msgId,
+        chatWith: targetId,
+        content: localBlobUrl,
+        direction: "sent",
+        mediaType: mediaType,
+        fileName: file.name,
+        fileSize: file.size,
+        timestamp: Date.now(),
+        status: initialStatus
+      });
+
+      // 4. Background upload to server
       const formData = new FormData();
-      formData.append("file", file, file.name || "media.jpg");
+      formData.append("file", file, file.name || "attachment");
 
       try {
         const res = await fetch(`${BACKEND_BASE}/upload`, { method: "POST", body: formData });
         const data = await res.json();
 
         if (data.url) {
-          let fullUrl = data.url.startsWith("/") ? BACKEND_BASE + data.url : data.url;
-          const msgId = "media-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5);
-          const mediaType = file.type.startsWith("audio/") ? "audio" : (file.type.startsWith("video/") ? "video" : "image");
-          const isOnline = ws && ws.readyState === WebSocket.OPEN;
-          const initialStatus = isOnline ? "sent" : "pending";
+          const fullUrl = data.url.startsWith("/") ? BACKEND_BASE + data.url : data.url;
 
-          displayMessage(fullUrl, "sent", msgId, mediaType, Date.now(), initialStatus);
+          // Associate remote URL with the cached blob as well
+          await VirgoStorage.saveMedia(fullUrl, file, {
+            msgId,
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            mediaType: mediaType
+          });
 
+          // Update message record with remote URL and status sent
           saveMessageToLocal({
             id: msgId,
             chatWith: targetId,
             content: fullUrl,
             direction: "sent",
             mediaType: mediaType,
+            fileName: file.name,
+            fileSize: file.size,
             timestamp: Date.now(),
-            status: initialStatus
+            status: "sent"
           });
 
+          updateMessageStatusInDomAndDb(msgId, "sent");
+
+          // Send WebSocket packet
           if (isOnline) {
             ws.send(JSON.stringify({
               id: msgId,
               from: myId,
               to: targetId,
               type: "media",
-              payload: { url: fullUrl, mediaType: mediaType }
+              payload: {
+                url: fullUrl,
+                mediaType: mediaType,
+                fileName: file.name,
+                fileSize: file.size
+              }
             }));
           }
         }
       } catch (err) {
-        alert("Upload error: " + err);
+        console.warn("Upload error, message safely kept in local database:", err);
+        updateMessageStatusInDomAndDb(msgId, "pending");
       }
     }
 
@@ -3184,7 +4188,7 @@
       event.target.value = "";
     }
 
-    // AUDIO RECORDING
+    // AUDIO RECORDING WITH LOCAL MEDIA VAULT
     async function startAudioRecording() {
       if (!activeChatId) return alert("Select a chat first!");
 
@@ -3201,23 +4205,101 @@
           if (audioChunks.length === 0) return;
 
           const audioBlob = new Blob(audioChunks, { type: chosenMime });
-          const formData = new FormData();
-          formData.append("file", audioBlob, chosenMime === "audio/mp4" ? "voice.mp4" : "voice.webm");
+          const msgId = "media-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5);
+          const voiceFileName = chosenMime === "audio/mp4" ? "voice.mp4" : "voice.webm";
 
-          const res = await fetch(`${BACKEND_BASE}/upload`, { method: "POST", body: formData });
-          const data = await res.json();
-          if (data.url) {
-            let fullUrl = data.url.startsWith("/") ? BACKEND_BASE + data.url : data.url;
-            const msgId = "media-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5);
-            const isOnline = ws && ws.readyState === WebSocket.OPEN;
-            const initialStatus = isOnline ? "sent" : "pending";
-            displayMessage(fullUrl, "sent", msgId, "audio", Date.now(), initialStatus);
-            saveMessageToLocal({ id: msgId, chatWith: activeChatId, content: fullUrl, direction: "sent", mediaType: "audio", timestamp: Date.now(), status: initialStatus });
-            if (isOnline) {
-              ws.send(JSON.stringify({ id: msgId, from: myId, to: activeChatId, type: "media", payload: { url: fullUrl, mediaType: "audio" } }));
+          // Save voice note in local vault immediately
+          const localVoiceUrl = await VirgoStorage.saveMedia(msgId, audioBlob, {
+            msgId,
+            fileName: voiceFileName,
+            fileType: chosenMime,
+            fileSize: audioBlob.size,
+            mediaType: "audio"
+          });
+
+          const isOnline = ws && ws.readyState === WebSocket.OPEN;
+          const initialStatus = isOnline ? "sending" : "pending";
+
+          displayMessage(localVoiceUrl || URL.createObjectURL(audioBlob), "sent", msgId, "audio", Date.now(), initialStatus, voiceFileName, audioBlob.size);
+          saveMessageToLocal({
+            id: msgId,
+            chatWith: activeChatId,
+            content: localVoiceUrl || "",
+            direction: "sent",
+            mediaType: "audio",
+            fileName: voiceFileName,
+            fileSize: audioBlob.size,
+            timestamp: Date.now(),
+            status: initialStatus
+          });
+
+          // Upload in background
+          const formData = new FormData();
+          formData.append("file", audioBlob, voiceFileName);
+
+          try {
+            const res = await fetch(`${BACKEND_BASE}/upload`, { method: "POST", body: formData });
+            const data = await res.json();
+            if (data.url) {
+              const fullUrl = data.url.startsWith("/") ? BACKEND_BASE + data.url : data.url;
+              await VirgoStorage.saveMedia(fullUrl, audioBlob, {
+                msgId,
+                fileName: voiceFileName,
+                fileType: chosenMime,
+                fileSize: audioBlob.size,
+                mediaType: "audio"
+              });
+              saveMessageToLocal({
+                id: msgId,
+                chatWith: activeChatId,
+                content: fullUrl,
+                direction: "sent",
+                mediaType: "audio",
+                fileName: voiceFileName,
+                fileSize: audioBlob.size,
+                timestamp: Date.now(),
+                status: "sent"
+              });
+              updateMessageStatusInDomAndDb(msgId, "sent");
+              if (isOnline) {
+                ws.send(JSON.stringify({
+                  id: msgId,
+                  from: myId,
+                  to: activeChatId,
+                  type: "media",
+                  payload: {
+                    url: fullUrl,
+                    mediaType: "audio",
+                    fileName: voiceFileName,
+                    fileSize: audioBlob.size
+                  }
+                }));
+              }
             }
+          } catch (uploadErr) {
+            console.warn("Voice upload error:", uploadErr);
           }
         };
+
+        mediaRecorder.start();
+
+        document.getElementById("chat-msg-input").style.display = "none";
+        document.getElementById("voice-rec-overlay").style.display = "flex";
+        document.getElementById("btn-mic").style.display = "none";
+
+        recSeconds = 0;
+        document.getElementById("voice-timer").innerText = "00:00";
+        recTimerInterval = setInterval(() => {
+          recSeconds++;
+          const mins = String(Math.floor(recSeconds / 60)).padStart(2, "0");
+          const secs = String(recSeconds % 60).padStart(2, "0");
+          document.getElementById("voice-timer").innerText = `${mins}:${secs}`;
+        }, 1000);
+
+      } catch (err) {
+        alert("Microphone permission required: " + err.message);
+      }
+    }
 
         mediaRecorder.start();
 
@@ -3263,19 +4345,30 @@
     }
 
     // LIGHTBOX
-    function openImageModal(src) {
+    function openImageModal(src, msgId, fileName) {
       let modal = document.getElementById("img-modal");
+      const safeName = fileName || extractFileName(src) || "photo.jpg";
       if (!modal) {
         modal = document.createElement("div");
         modal.id = "img-modal";
-        modal.style = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.92); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 99999; overflow: hidden;";
+        modal.style = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.94); backdrop-filter: blur(12px); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 99999; overflow: hidden;";
         modal.innerHTML = `
-          <button style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.15); border: 1px solid var(--border-starlight); color: white; font-size: 24px; width: 44px; height: 44px; border-radius: 50%; z-index: 100000; cursor: pointer; display:flex; align-items:center; justify-content:center;" onclick="document.getElementById('img-modal').style.display='none'">&times;</button>
-          <img id="img-modal-target" style="max-width: 95%; max-height: 90vh; border-radius: 12px; border: 1px solid var(--border-starlight);">
+          <div style="position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 12px; z-index: 100000;">
+            <button id="img-modal-save-btn" style="background: rgba(245,197,66,0.18); border: 1px solid var(--virgo-gold); color: var(--virgo-gold-bright); font-size: 13px; font-weight: 700; padding: 8px 16px; border-radius: 20px; cursor: pointer; display:flex; align-items:center; gap:6px;">
+              <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+              <span>Save to Device</span>
+            </button>
+            <button style="background: rgba(255,255,255,0.15); border: 1px solid var(--border-starlight); color: white; font-size: 24px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display:flex; align-items:center; justify-content:center;" onclick="document.getElementById('img-modal').style.display='none'">&times;</button>
+          </div>
+          <img id="img-modal-target" style="max-width: 95%; max-height: 85vh; border-radius: 12px; border: 1px solid var(--border-starlight); box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
         `;
         document.body.appendChild(modal);
       }
       document.getElementById("img-modal-target").src = src;
+      const saveBtn = document.getElementById("img-modal-save-btn");
+      if (saveBtn) {
+        saveBtn.onclick = () => VirgoStorage.saveFileToDevice(src, safeName, "image/jpeg");
+      }
       modal.style.display = "flex";
     }
 

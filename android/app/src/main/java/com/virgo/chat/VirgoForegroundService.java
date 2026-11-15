@@ -219,6 +219,19 @@ public class VirgoForegroundService extends Service {
         pollingThread.start();
     }
 
+    private boolean isSameUserId(String id1, String id2) {
+        if (id1 == null || id2 == null) return false;
+        String s1 = id1.trim().toLowerCase();
+        String s2 = id2.trim().toLowerCase();
+        if (s1.equals(s2)) return true;
+        String c1 = s1.replaceAll("[^0-9]", "");
+        String c2 = s2.replaceAll("[^0-9]", "");
+        if (c1.length() >= 10 && c2.length() >= 10) {
+            return c1.substring(c1.length() - 10).equals(c2.substring(c2.length() - 10));
+        }
+        return false;
+    }
+
     private void handlePollPayload(String jsonStr) {
         if (jsonStr == null || jsonStr.trim().isEmpty()) return;
         try {
@@ -234,7 +247,7 @@ public class VirgoForegroundService extends Service {
                     Log.d(TAG, "📩 Native Poller received message [" + msgId + "] from " + from + ": " + text);
 
                     // Post heads-up notification if app is in background OR user is viewing a different chat
-                    boolean inForegroundWithSameUser = isActivityInForeground && MainActivity.currentOpenChat != null && MainActivity.currentOpenChat.equalsIgnoreCase(from);
+                    boolean inForegroundWithSameUser = isActivityInForeground && MainActivity.currentOpenChat != null && isSameUserId(MainActivity.currentOpenChat, from);
                     if (!inForegroundWithSameUser) {
                         NotificationHelper.postMessageNotification(this, msgId, from, text);
                     }

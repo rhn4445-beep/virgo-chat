@@ -40,7 +40,7 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = "v2.7.1"
+var serverBuildTime = "v2.8.0"
 
 func normalizeUserID(raw string) string {
 	s := strings.ToLower(strings.TrimSpace(raw))
@@ -247,8 +247,10 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	log.Printf("📦 File saved: %s (size: %d bytes)", savedName, header.Size)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"url": "/uploads/" + savedName,
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"url":      "/uploads/" + savedName,
+		"fileName": header.Filename,
+		"fileSize": header.Size,
 	})
 }
 

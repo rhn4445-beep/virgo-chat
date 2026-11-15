@@ -8,18 +8,24 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
 import android.media.AudioAttributes;
+import android.media.MediaScannerConnection;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.util.Base64;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.widget.Toast;
+import java.io.File;
+import java.io.FileOutputStream;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import com.getcapacitor.BridgeActivity;
@@ -227,6 +233,42 @@ public class MainActivity extends BridgeActivity {
                                             startActivity(intent);
                                         }
                                     } catch (Exception ignored) {}
+                                }
+                            });
+                        }
+
+                        @JavascriptInterface
+                        public void saveFileToDownloads(String fileName, String base64Data, String mimeType) {
+                            runOnUiThread(() -> {
+                                try {
+                                    byte[] bytes = Base64.decode(base64Data, Base64.DEFAULT);
+                                    File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                                    if (!dir.exists()) dir.mkdirs();
+                                    String safeName = (fileName != null && !fileName.trim().isEmpty()) ? fileName.trim() : "virgo_file";
+                                    File destFile = new File(dir, safeName);
+                                    int count = 1;
+                                    while (destFile.exists()) {
+                                        String nameNoExt = safeName;
+                                        String ext = "";
+                                        int dotIdx = safeName.lastIndexOf('.');
+                                        if (dotIdx > 0) {
+                                            nameNoExt = safeName.substring(0, dotIdx);
+                                            ext = safeName.substring(dotIdx);
+                                        }
+                                        destFile = new File(dir, nameNoExt + "_" + count + ext);
+                                        count++;
+                                    }
+                                    try (FileOutputStream fos = new FileOutputStream(destFile)) {
+                                        fos.write(bytes);
+                                        fos.flush();
+                                    }
+                                    String finalMime = (mimeType != null && !mimeType.isEmpty()) ? mimeType : "application/octet-stream";
+                                    MediaScannerConnection.scanFile(getApplicationContext(), new String[]{destFile.getAbsolutePath()}, new String[]{finalMime}, null);
+                                    Toast.makeText(getApplicationContext(), "Saved to Downloads: " + destFile.getName(), Toast.LENGTH_LONG).show();
+                                    Log.d(TAG, "File successfully saved to Downloads: " + destFile.getAbsolutePath());
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Failed saving file to downloads: " + e.getMessage(), e);
+                                    Toast.makeText(getApplicationContext(), "Failed saving file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                                 }
                             });
                         }
