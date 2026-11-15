@@ -40,7 +40,7 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = "v2.8.1"
+var serverBuildTime = "v2.8.2"
 
 func normalizeUserID(raw string) string {
 	s := strings.ToLower(strings.TrimSpace(raw))
@@ -130,56 +130,66 @@ type UserProfile struct {
 	UpdatedAt   int64  `json:"updatedAt"`
 }
 
-func handleGoogleAuth(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	if r.Method == http.MethodOptions {
-		return
+func handleGoogleAuth(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if r.Method == http.MethodOptions {
+			return
+		}
+
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req struct {
+			Credential string `json:"credential"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Credential == "" {
+			http.Error(w, "Missing Google credential token", http.StatusBadRequest)
+			return
+		}
+
+		verifyURL := "https://oauth2.googleapis.com/tokeninfo?id_token=" + url.QueryEscape(req.Credential)
+		resp, err := http.Get(verifyURL)
+		if err != nil || resp.StatusCode != http.StatusOK {
+			http.Error(w, "Failed to verify token with Google", http.StatusUnauthorized)
+			return
+		}
+		defer resp.Body.Close()
+
+		var tokenInfo GoogleTokenInfo
+		if err := json.NewDecoder(resp.Body).Decode(&tokenInfo); err != nil {
+			http.Error(w, "Malformed token response", http.StatusInternalServerError)
+			return
+		}
+
+		if tokenInfo.Email == "" || (tokenInfo.EmailVerified != "true" && tokenInfo.EmailVerified != "1") {
+			http.Error(w, "Unverified Google account", http.StatusUnauthorized)
+			return
+		}
+
+		target := strings.ToLower(strings.TrimSpace(tokenInfo.Email))
+		token := fmt.Sprintf("tok-%d", time.Now().UnixNano())
+
+		now := time.Now().UnixMilli()
+		_, err = db.Exec(`INSERT INTO user_tokens (user_id, token, auth_provider, created_at) 
+		                  VALUES (?, ?, 'google', ?)
+		                  ON CONFLICT(user_id) DO UPDATE SET token = excluded.token, created_at = excluded.created_at;`, target, token, now)
+		if err != nil {
+			log.Printf("⚠️ Failed to store user token: %v", err)
+		}
+
+		log.Printf("✅ Google Auth Successful for: %s (token secured)", target)
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"status": "authenticated",
+			"userId": target,
+			"token":  token,
+		})
 	}
-
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req struct {
-		Credential string `json:"credential"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Credential == "" {
-		http.Error(w, "Missing Google credential token", http.StatusBadRequest)
-		return
-	}
-
-	verifyURL := "https://oauth2.googleapis.com/tokeninfo?id_token=" + url.QueryEscape(req.Credential)
-	resp, err := http.Get(verifyURL)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		http.Error(w, "Failed to verify token with Google", http.StatusUnauthorized)
-		return
-	}
-	defer resp.Body.Close()
-
-	var tokenInfo GoogleTokenInfo
-	if err := json.NewDecoder(resp.Body).Decode(&tokenInfo); err != nil {
-		http.Error(w, "Malformed token response", http.StatusInternalServerError)
-		return
-	}
-
-	if tokenInfo.Email == "" || (tokenInfo.EmailVerified != "true" && tokenInfo.EmailVerified != "1") {
-		http.Error(w, "Unverified Google account", http.StatusUnauthorized)
-		return
-	}
-
-	target := strings.ToLower(strings.TrimSpace(tokenInfo.Email))
-	token := fmt.Sprintf("tok-%d", time.Now().UnixNano())
-
-	log.Printf("✅ Google Auth Successful for: %s", target)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status": "authenticated",
-		"userId": target,
-		"token":  token,
-	})
 }
 
 func handleUpload(w http.ResponseWriter, r *http.Request) {
@@ -824,6 +834,12 @@ func initDatabase() (*sql.DB, error) {
 		about TEXT,
 		avatar_url TEXT,
 		updated_at INTEGER
+	);
+	CREATE TABLE IF NOT EXISTS user_tokens (
+		user_id TEXT PRIMARY KEY,
+		token TEXT,
+		auth_provider TEXT,
+		created_at INTEGER
 	);`
 	if _, err := db.Exec(schema); err != nil {
 		return nil, err
@@ -984,7 +1000,7 @@ func main() {
 	hub := newHub(db)
 	go hub.run()
 
-	http.HandleFunc("/auth/google", handleGoogleAuth)
+	http.HandleFunc("/auth/google", handleGoogleAuth(db))
 	http.HandleFunc("/upload", handleUpload)
 	http.HandleFunc("/api/profile", handleProfile(db, hub))
 
@@ -1074,6 +1090,19 @@ func main() {
 			log.Println("❌ WebSocket rejected: missing userId/user query param")
 			http.Error(w, "userId required", http.StatusBadRequest)
 			return
+		}
+
+		token := strings.TrimSpace(r.URL.Query().Get("token"))
+
+		var expectedToken string
+		err := db.QueryRow(`SELECT token FROM user_tokens WHERE user_id = ?;`, userId).Scan(&expectedToken)
+		if err == nil && expectedToken != "" {
+			if token == "" || token != expectedToken {
+				log.Printf("❌ WebSocket rejected: unauthorized attempt for verified account %s", userId)
+				http.Error(w, "Unauthorized: verified token required", http.StatusUnauthorized)
+				return
+			}
+			log.Printf("🔒 WebSocket verified token accepted for: %s", userId)
 		}
 
 		conn, err := upgrader.Upgrade(w, r, nil)
