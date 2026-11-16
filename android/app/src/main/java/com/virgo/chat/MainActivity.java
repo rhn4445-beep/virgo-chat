@@ -134,6 +134,13 @@ public class MainActivity extends BridgeActivity {
                     settings.setDomStorageEnabled(true);
                     settings.setDatabaseEnabled(true);
                     settings.setMediaPlaybackRequiresUserGesture(false);
+                    settings.setJavaScriptCanOpenWindowsAutomatically(true);
+                    settings.setSupportMultipleWindows(true);
+
+                    String ua = settings.getUserAgentString();
+                    if (ua != null && ua.contains("; wv")) {
+                        settings.setUserAgentString(ua.replace("; wv", ""));
+                    }
 
                     webView.addJavascriptInterface(new Object() {
                         @JavascriptInterface
