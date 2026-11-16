@@ -394,6 +394,20 @@ public class MainActivity extends BridgeActivity {
                         }
 
                         @JavascriptInterface
+                        public void reloadWithCleanCache() {
+                            runOnUiThread(() -> {
+                                try {
+                                    if (bridge != null && bridge.getWebView() != null) {
+                                        bridge.getWebView().clearCache(true);
+                                        bridge.getWebView().reload();
+                                    }
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Failed reloadWithCleanCache: " + e.getMessage());
+                                }
+                            });
+                        }
+
+                        @JavascriptInterface
                         public void downloadAndInstallUpdate(String url) {
                             runOnUiThread(() -> {
                                 try {

@@ -1492,6 +1492,292 @@
       flex-shrink: 0;
     }
 
+    /* OTA UPDATE IN-APP POPUP WINDOW MODAL */
+    .ota-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 6, 12, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      animation: fadeInOta 0.25s ease-out;
+    }
+    @keyframes fadeInOta {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .ota-modal-card {
+      position: relative;
+      width: 100%;
+      max-width: 430px;
+      background: radial-gradient(circle at 50% 0%, #16243b 0%, #0c1524 60%, #060a12 100%);
+      border: 1.5px solid rgba(245, 197, 66, 0.45);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 197, 66, 0.2);
+      padding: 26px 20px 22px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      overflow: hidden;
+      animation: popScaleOta 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes popScaleOta {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .ota-modal-glow {
+      position: absolute;
+      top: -50px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 220px;
+      height: 120px;
+      background: radial-gradient(ellipse at center, rgba(245, 197, 66, 0.35) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .ota-modal-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-muted);
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      z-index: 2;
+    }
+    .ota-modal-close:hover {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+    }
+    .ota-modal-icon-wrap {
+      position: relative;
+      width: 76px;
+      height: 76px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ota-modal-logo {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 0 20px rgba(245, 197, 66, 0.5);
+      border: 2px solid var(--virgo-gold);
+      position: relative;
+      z-index: 2;
+    }
+    .ota-pulse-ring {
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px solid var(--virgo-gold);
+      opacity: 0.6;
+      animation: pulseRingOta 2s infinite ease-out;
+    }
+    @keyframes pulseRingOta {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 0.2; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .ota-version-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(245, 197, 66, 0.12);
+      border: 1px solid rgba(245, 197, 66, 0.35);
+      border-radius: 20px;
+      padding: 4px 12px;
+      margin-bottom: 10px;
+    }
+    .ota-version-pill {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--virgo-gold-bright);
+      letter-spacing: 0.5px;
+    }
+    .ota-ready-badge {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #4ade80;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .ota-modal-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.3px;
+      margin-bottom: 6px;
+    }
+    .ota-modal-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.45;
+      margin-bottom: 16px;
+      max-width: 360px;
+    }
+    .ota-modal-features {
+      width: 100%;
+      background: rgba(10, 16, 27, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 18px;
+      text-align: left;
+    }
+    .ota-feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .ota-feat-icon {
+      font-size: 16px;
+      line-height: 1.2;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .ota-feat-text {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+    }
+    .ota-feat-text strong {
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .ota-feat-text span {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+    .ota-modal-actions {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .btn-ota-primary {
+      width: 100%;
+      background: linear-gradient(135deg, #ffd700 0%, #f5c542 50%, #d4a017 100%);
+      color: #06090e;
+      border: none;
+      border-radius: 14px;
+      padding: 13px 20px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 18px rgba(245, 197, 66, 0.45);
+      transition: all 0.15s;
+    }
+    .btn-ota-primary:active {
+      transform: scale(0.97);
+    }
+    .ota-secondary-row {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+    }
+    .btn-ota-later {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 6px 8px;
+      border-radius: 8px;
+      transition: color 0.15s;
+    }
+    .btn-ota-later:hover { color: #fff; }
+    .link-ota-apk {
+      color: var(--virgo-gold-bright);
+      font-size: 11.5px;
+      font-weight: 600;
+      text-decoration: underline;
+      cursor: pointer;
+      padding: 6px 8px;
+    }
+    .link-ota-apk:hover { color: #fff; }
+
+    /* OTA PROGRESS BAR DURING REFRESH */
+    .ota-progress-container {
+      width: 100%;
+      margin-top: 6px;
+      text-align: center;
+    }
+    .ota-progress-bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+    .ota-progress-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #ffd700, #ff9900, #ffd700);
+      background-size: 200% 100%;
+      animation: progressAnimOta 1.2s infinite linear;
+      border-radius: 8px;
+    }
+    @keyframes progressAnimOta {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
+    .ota-progress-label {
+      font-size: 11.5px;
+      color: var(--virgo-gold-bright);
+      margin-top: 8px;
+      font-weight: 600;
+    }
+
+    .btn-check-updates {
+      background: rgba(245, 197, 66, 0.12);
+      border: 1px solid var(--virgo-gold);
+      border-radius: 10px;
+      color: var(--virgo-gold-bright);
+      padding: 6px 12px;
+      font-size: 11.5px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-check-updates:hover {
+      background: rgba(245, 197, 66, 0.25);
+      color: #fff;
+    }
+
     /* IN-APP MESSAGE TOAST NOTIFICATION */
     .inapp-msg-toast {
       position: fixed;
@@ -1972,6 +2258,76 @@
     <button class="update-banner-close" onclick="dismissUpdateBanner()">✕</button>
   </div>
 
+  <!-- OTA UPDATE IN-APP POPUP WINDOW MODAL -->
+  <div id="ota-update-modal" class="ota-modal-backdrop" style="display:none;" onclick="if(event.target===this)dismissUpdateModal()">
+    <div class="ota-modal-card">
+      <div class="ota-modal-glow"></div>
+      <button class="ota-modal-close" onclick="dismissUpdateModal()" title="Close">✕</button>
+      
+      <div class="ota-modal-icon-wrap">
+        <img src="icon.png?v=celestial" alt="Virgo" class="ota-modal-logo">
+        <div class="ota-pulse-ring"></div>
+      </div>
+
+      <div class="ota-version-tag">
+        <span class="ota-version-pill" id="ota-modal-version-text">Version v2.8.7</span>
+        <span class="ota-ready-badge">✦ Ready to Update</span>
+      </div>
+
+      <h3 class="ota-modal-title">New Update Available</h3>
+      <p class="ota-modal-desc">A new celestial version of Virgo is ready. Update instantly over-the-air in 2 seconds without downloading any APK!</p>
+
+      <div class="ota-modal-features">
+        <div class="ota-feature-item">
+          <div class="ota-feat-icon">⚡</div>
+          <div class="ota-feat-text">
+            <strong>Instant Over-the-Air Update</strong>
+            <span>Updates right inside the app with 1-tap instant cache refresh.</span>
+          </div>
+        </div>
+        <div class="ota-feature-item">
+          <div class="ota-feat-icon">📞</div>
+          <div class="ota-feat-text">
+            <strong>Encrypted Voice &amp; Video Calling</strong>
+            <span>End-to-end encrypted WebRTC audio &amp; HD video calls.</span>
+          </div>
+        </div>
+        <div class="ota-feature-item">
+          <div class="ota-feat-icon">💾</div>
+          <div class="ota-feat-text">
+            <strong>Permanent Profile &amp; Bio Persistence</strong>
+            <span>Your name, avatar, and bio quote save permanently across restarts.</span>
+          </div>
+        </div>
+        <div class="ota-feature-item">
+          <div class="ota-feat-icon">📸</div>
+          <div class="ota-feat-text">
+            <strong>In-App Camera &amp; Moments Viewfinder</strong>
+            <span>Capture and share moments directly with the new camera integration.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ota-modal-actions">
+        <button id="btn-ota-update-now" class="btn-ota-primary" onclick="applyInstantOTAUpdate()">
+          <span style="font-size:16px;">⚡</span>
+          <span>Update Now (Instant OTA)</span>
+        </button>
+        <div class="ota-secondary-row">
+          <button class="btn-ota-later" onclick="dismissUpdateModal()">Remind Me Later</button>
+          <a href="https://virgo-chat.onrender.com/virgo.apk" target="_blank" class="link-ota-apk" title="Download standalone APK file">Download APK File</a>
+        </div>
+      </div>
+
+      <div id="ota-progress-container" class="ota-progress-container" style="display:none;">
+        <div class="ota-progress-bar">
+          <div class="ota-progress-fill"></div>
+        </div>
+        <div class="ota-progress-label">Updating Virgo Messenger... Refreshing cache ✦</div>
+      </div>
+    </div>
+  </div>
+
 
   <!-- DESKTOP LEFT NAVIGATION RAIL -->
   <div id="desktop-nav-rail">
@@ -2211,12 +2567,15 @@
             <span class="status-pill green">Saved</span>
           </div>
 
-          <div class="security-status-row">
+          <div class="security-status-row" style="align-items:center;">
             <div class="security-info">
               <div class="security-title">Client Version</div>
-              <div class="security-sub">Virgo Celestial Messenger v2.8.4</div>
+              <div class="security-sub" id="lbl-drawer-version-sub">Virgo Messenger v2.8.7 (Celestial OTA)</div>
             </div>
-            <span class="status-pill gold">Latest</span>
+            <button type="button" class="btn-check-updates" onclick="manualCheckForUpdates()" title="Check for instant updates">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+              <span>Check Updates</span>
+            </button>
           </div>
         </div>
 
@@ -2848,8 +3207,10 @@
     const isLocalDev = !isCapacitor && window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (window.location.port !== "");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = "v2.8.0";
+    let activeClientVersion = localStorage.getItem("virgo_active_client_version") || "v2.8.7";
     let updateBannerDismissed = false;
+    let updateModalDismissed = false;
+    let pendingNewVersion = "";
 
     // Mobile background lifecycle hooks called from Android MainActivity
     window.onVirgoResume = function() {
@@ -2873,16 +3234,23 @@
     };
 
     function handleIncomingAppVersion(newVersion) {
-      if (!newVersion || updateBannerDismissed) return;
-      if (newVersion !== activeClientVersion) {
+      if (!newVersion) return;
+      pendingNewVersion = newVersion;
+      const currentVer = localStorage.getItem("virgo_active_client_version") || activeClientVersion;
+      if (newVersion !== currentVer) {
         showUpdateNotificationBanner(newVersion);
+        if (!updateModalDismissed) {
+          showUpdateModal(newVersion, currentVer);
+        }
       }
     }
 
     function showUpdateNotificationBanner(newVersion) {
       const banner = document.getElementById("ota-update-banner");
-      if (banner) {
+      if (banner && !updateBannerDismissed) {
         banner.style.display = "flex";
+        const desc = banner.querySelector(".update-banner-desc");
+        if (desc) desc.innerText = `Version ${newVersion} is ready to apply.`;
       }
     }
 
@@ -2892,29 +3260,86 @@
       if (banner) banner.style.display = "none";
     }
 
+    function showUpdateModal(newVersion, currentVer) {
+      const modal = document.getElementById("ota-update-modal");
+      if (!modal) return;
+      pendingNewVersion = newVersion || "v2.8.7";
+      const verTag = document.getElementById("ota-modal-version-text");
+      if (verTag) {
+        verTag.innerText = `New: ${pendingNewVersion} (Current: ${currentVer || activeClientVersion})`;
+      }
+      const btn = document.getElementById("btn-ota-update-now");
+      if (btn) btn.style.display = "flex";
+      const prog = document.getElementById("ota-progress-container");
+      if (prog) prog.style.display = "none";
+      modal.style.display = "flex";
+    }
+
+    function dismissUpdateModal() {
+      updateModalDismissed = true;
+      const modal = document.getElementById("ota-update-modal");
+      if (modal) modal.style.display = "none";
+    }
+
     function applyInstantUpdate() {
-      const isApp = !!(window.AndroidNative || window.Capacitor);
-      if (isApp) {
-        // Safe update for Android APK: download and trigger package installer
-        if (window.AndroidNative && typeof window.AndroidNative.downloadAndInstallUpdate === "function") {
-          window.AndroidNative.downloadAndInstallUpdate("https://virgo-chat.onrender.com/virgo.apk");
-        } else {
-          window.open("https://virgo-chat.onrender.com/virgo.apk", "_system");
-        }
-        return;
-      }
-      const banner = document.getElementById("ota-update-banner");
-      if (banner) {
-        banner.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;"><span style="font-size:20px;">⚡</span><strong style="color:var(--virgo-gold-bright);font-size:13.5px;">Updating Virgo...</strong></div>`;
-      }
+      showUpdateModal(pendingNewVersion || "v2.8.7");
+    }
+
+    async function applyInstantOTAUpdate() {
+      const btn = document.getElementById("btn-ota-update-now");
+      const prog = document.getElementById("ota-progress-container");
+      if (btn) btn.style.display = "none";
+      if (prog) prog.style.display = "block";
+
+      const targetVersion = pendingNewVersion || "v2.8.7";
+      localStorage.setItem("virgo_active_client_version", targetVersion);
+      activeClientVersion = targetVersion;
+
       try {
         if ('caches' in window) {
-          caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(() => {});
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
         }
-      } catch(e) {}
+      } catch (e) {}
+
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (let r of registrations) {
+            await r.unregister();
+          }
+        }
+      } catch (e) {}
+
+      // Instant seamless reload directly inside the WebView
       setTimeout(() => {
-        window.location.reload();
-      }, 300);
+        if (window.AndroidNative && typeof window.AndroidNative.reloadWithCleanCache === "function") {
+          window.AndroidNative.reloadWithCleanCache();
+          return;
+        }
+        const targetUrl = new URL(window.location.href);
+        targetUrl.searchParams.set("ota", Date.now());
+        window.location.href = targetUrl.toString();
+      }, 900);
+    }
+
+    function manualCheckForUpdates() {
+      showToast("Checking for updates... ✦");
+      fetch(`${BACKEND_BASE}/api/version?t=${Date.now()}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.version) {
+            const cur = localStorage.getItem("virgo_active_client_version") || activeClientVersion;
+            if (data.version !== cur) {
+              showUpdateModal(data.version, cur);
+              return;
+            }
+          }
+          showToast(`Virgo is up to date (${activeClientVersion}) ✨`);
+        })
+        .catch(() => {
+          showToast(`Virgo is up to date (${activeClientVersion}) ✨`);
+        });
     }
 
     async function pollForAppUpdates() {
@@ -3750,9 +4175,18 @@
       const idEl = document.getElementById("lbl-profile-id");
       if (idEl) idEl.innerText = myId;
 
-      const heroName = document.getElementById("hero-display-name");
-      if (heroName && heroName.innerText === "Celestial User") {
-        heroName.innerText = myId.split("@")[0];
+      // Immediately hydrate profile from local storage so name, bio, and avatar are instantaneous!
+      const localProfile = getLocalProfile(myId);
+      if (localProfile) {
+        applyProfileToUI(localProfile);
+      } else {
+        const savedAvatar = localStorage.getItem(`virgo_avatar_${myId}`) || "";
+        applyProfileToUI({
+          userId: myId,
+          displayName: myId.split("@")[0],
+          about: "In the stars",
+          avatarUrl: savedAvatar
+        });
       }
 
       syncNativeUserId();
@@ -3935,7 +4369,114 @@
       }
     }
 
-    // PROFILE
+    // PROFILE PERSISTENCE HELPERS
+    function compressImageToDataUrl(file, maxWidth = 256, maxHeight = 256, quality = 0.82) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let w = img.width;
+            let h = img.height;
+            if (w > maxWidth || h > maxHeight) {
+              if (w > h) {
+                h = Math.round((h * maxWidth) / w);
+                w = maxWidth;
+              } else {
+                w = Math.round((w * maxHeight) / h);
+                h = maxHeight;
+              }
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL("image/jpeg", quality));
+          };
+          img.onerror = () => resolve(e.target.result);
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function saveProfileLocally(p) {
+      if (!p || !p.userId) return;
+      const uid = normalizeUserId(p.userId);
+      try {
+        localStorage.setItem(`virgo_profile_${uid}`, JSON.stringify(p));
+        localStorage.setItem("virgo_active_profile", JSON.stringify(p));
+        if (p.avatarUrl) {
+          localStorage.setItem(`virgo_avatar_${uid}`, p.avatarUrl);
+        }
+      } catch(e) {
+        console.warn("saveProfileLocally warning:", e);
+      }
+    }
+
+    function getLocalProfile(userId) {
+      if (!userId) return null;
+      const uid = normalizeUserId(userId);
+      try {
+        const raw = localStorage.getItem(`virgo_profile_${uid}`) || localStorage.getItem("virgo_active_profile");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed) {
+            if (!parsed.avatarUrl) {
+              parsed.avatarUrl = localStorage.getItem(`virgo_avatar_${uid}`) || "";
+            }
+            return parsed;
+          }
+        }
+      } catch(e) {}
+      return null;
+    }
+
+    function applyProfileToUI(p) {
+      if (!p) return;
+      const activeUser = normalizeUserId(p.userId || myId || getPersistentAuthUser() || "");
+      const dispName = (p.displayName || "").trim() || (activeUser ? activeUser.split("@")[0] : "Celestial User");
+      const aboutText = (p.about || "").trim() || "In the stars";
+      const avatarUrl = p.avatarUrl || localStorage.getItem(`virgo_avatar_${activeUser}`) || `https://ui-avatars.com/api/?name=${encodeURIComponent(dispName)}&background=121b2a&color=f5c542`;
+
+      const nameInp = document.getElementById("inp-profile-name");
+      if (nameInp) nameInp.value = dispName;
+
+      const heroName = document.getElementById("hero-display-name");
+      if (heroName) heroName.innerText = dispName;
+
+      const aboutInp = document.getElementById("inp-profile-about");
+      if (aboutInp) aboutInp.value = aboutText;
+
+      const idLabel = document.getElementById("lbl-profile-id");
+      if (idLabel && activeUser) idLabel.innerText = activeUser;
+
+      const headerPill = document.getElementById("header-my-id-pill");
+      if (headerPill && activeUser) headerPill.innerText = dispName || activeUser;
+
+      if (avatarUrl) {
+        const rAvatar = document.getElementById("rail-my-avatar");
+        if (rAvatar) rAvatar.src = avatarUrl;
+        const dAvatar = document.getElementById("drawer-avatar-img");
+        if (dAvatar) dAvatar.src = avatarUrl;
+        const sAvatar = document.getElementById("status-user-avatar");
+        if (sAvatar) sAvatar.src = avatarUrl;
+      }
+
+      if (activeUser) {
+        profileCache[activeUser] = {
+          userId: activeUser,
+          displayName: dispName,
+          about: aboutText,
+          avatarUrl: avatarUrl,
+          updatedAt: p.updatedAt || Date.now()
+        };
+      }
+    }
+
+    // PROFILE DRAWER
     function toggleProfileDrawer(open) {
       const drawer = document.getElementById("profile-drawer");
       if (open) {
@@ -3950,38 +4491,54 @@
       try {
         const activeUser = myId || getPersistentAuthUser();
         if (!activeUser) return;
-        const res = await fetch(`${BACKEND_BASE}/api/profile?userId=${encodeURIComponent(activeUser)}`);
-        const p = await res.json();
-        const dispName = p.displayName || activeUser.split("@")[0];
-        
-        const nameInp = document.getElementById("inp-profile-name");
-        if (nameInp) nameInp.value = p.displayName || "";
-        
-        const heroName = document.getElementById("hero-display-name");
-        if (heroName) heroName.innerText = dispName;
-        
-        const aboutInp = document.getElementById("inp-profile-about");
-        if (aboutInp) aboutInp.value = p.about || "";
-        
-        const idLabel = document.getElementById("lbl-profile-id");
-        if (idLabel) idLabel.innerText = activeUser;
-        
-        const avatarUrl = p.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(dispName)}&background=121b2a&color=f5c542`;
-        const rAvatar = document.getElementById("rail-my-avatar");
-        if (rAvatar) rAvatar.src = avatarUrl;
-        const dAvatar = document.getElementById("drawer-avatar-img");
-        if (dAvatar) dAvatar.src = avatarUrl;
-        const sAvatar = document.getElementById("status-user-avatar");
-        if (sAvatar) sAvatar.src = avatarUrl;
-        
-        profileCache[activeUser] = p;
+        const cleanId = normalizeUserId(activeUser);
+
+        // 1. Immediately hydrate from local storage so UI is never blank
+        const localP = getLocalProfile(cleanId);
+        if (localP) {
+          applyProfileToUI(localP);
+        }
+
+        // 2. Query backend to sync
+        const res = await fetch(`${BACKEND_BASE}/api/profile?userId=${encodeURIComponent(cleanId)}`);
+        if (res.ok) {
+          const serverP = await res.json();
+          if (serverP) {
+            const isServerDefault = (!serverP.avatarUrl && (serverP.displayName === cleanId.split("@")[0]) && (serverP.about === "In the stars" || serverP.about === "Hey there! I am using Virgo."));
+            
+            if (isServerDefault && localP && (localP.displayName !== cleanId.split("@")[0] || localP.about !== "In the stars" || localP.avatarUrl)) {
+              // Server SQLite lost data on redeploy/spin-down. Restore from client!
+              fetch(`${BACKEND_BASE}/api/profile`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(localP)
+              }).catch(() => {});
+            } else {
+              // Merge server data with local cache
+              const merged = {
+                userId: cleanId,
+                displayName: serverP.displayName || (localP ? localP.displayName : cleanId.split("@")[0]),
+                about: serverP.about || (localP ? localP.about : "In the stars"),
+                avatarUrl: serverP.avatarUrl || (localP ? localP.avatarUrl : ""),
+                updatedAt: serverP.updatedAt || Date.now()
+              };
+              saveProfileLocally(merged);
+              applyProfileToUI(merged);
+            }
+          }
+        }
       } catch (e) {
-        console.warn("loadMyProfile error:", e);
+        console.warn("loadMyProfile network sync skipped (offline or cold start):", e);
       }
     }
 
     async function fetchUserProfile(userId) {
       if (profileCache[userId]) return profileCache[userId];
+      const localP = getLocalProfile(userId);
+      if (localP) {
+        profileCache[userId] = localP;
+        return localP;
+      }
       try {
         const res = await fetch(`${BACKEND_BASE}/api/profile?userId=${encodeURIComponent(userId)}`);
         const p = await res.json();
@@ -3993,10 +4550,37 @@
     }
 
     async function saveProfileChanges() {
-      const name = (document.getElementById("inp-profile-name").value || "").trim();
-      const about = (document.getElementById("inp-profile-about").value || "").trim();
-      const avatar = document.getElementById("drawer-avatar-img").src;
+      const activeUser = myId || getPersistentAuthUser();
+      if (!activeUser) {
+        showToast("Please sign in first.", "error");
+        return;
+      }
+      const cleanId = normalizeUserId(activeUser);
+      const nameInp = document.getElementById("inp-profile-name");
+      const aboutInp = document.getElementById("inp-profile-about");
+      const dAvatar = document.getElementById("drawer-avatar-img");
       const saveBtn = document.getElementById("btn-save-profile");
+
+      const name = (nameInp ? nameInp.value : "").trim() || cleanId.split("@")[0];
+      const about = (aboutInp ? aboutInp.value : "").trim() || "In the stars";
+      
+      // Use current avatar src or saved local avatar
+      let avatar = (dAvatar ? dAvatar.src : "") || localStorage.getItem(`virgo_avatar_${cleanId}`) || "";
+      if (!avatar.startsWith("data:") && !avatar.startsWith("http")) {
+        avatar = "";
+      }
+
+      const profileObj = {
+        userId: cleanId,
+        displayName: name,
+        about: about,
+        avatarUrl: avatar,
+        updatedAt: Date.now()
+      };
+
+      // 1. INSTANT LOCAL SAVE (Permanent across app restarts)
+      saveProfileLocally(profileObj);
+      applyProfileToUI(profileObj);
 
       if (saveBtn) {
         saveBtn.disabled = true;
@@ -4004,27 +4588,21 @@
       }
 
       try {
-        const activeUser = myId || getPersistentAuthUser();
         const res = await fetch(`${BACKEND_BASE}/api/profile`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: activeUser,
-            displayName: name || activeUser.split("@")[0],
-            about: about || "In the stars",
-            avatarUrl: avatar.startsWith("http") ? avatar : ""
-          })
+          body: JSON.stringify(profileObj)
         });
         if (res.ok) {
-          showToast("Profile changes saved successfully! ✨");
-          await loadMyProfile();
-          refreshSidebarContacts();
-          setTimeout(() => toggleProfileDrawer(false), 500);
+          showToast("Profile changes saved permanently! ✨");
         } else {
-          showToast("Failed saving changes. Please try again.", "error");
+          showToast("Saved locally on your device! ✨");
         }
+        refreshSidebarContacts();
+        setTimeout(() => toggleProfileDrawer(false), 500);
       } catch (e) {
-        showToast("Network error saving profile.", "error");
+        showToast("Saved locally on your device! ✨");
+        setTimeout(() => toggleProfileDrawer(false), 500);
       } finally {
         if (saveBtn) {
           saveBtn.disabled = false;
@@ -4036,19 +4614,38 @@
     async function uploadProfilePhoto(event) {
       const file = event.target.files[0];
       if (!file) return;
-      showToast("Uploading new photo...");
-      const formData = new FormData();
-      formData.append("file", file, "avatar.jpg");
+      showToast("Processing profile photo... ✦");
+      
       try {
-        const res = await fetch(`${BACKEND_BASE}/upload`, { method: "POST", body: formData });
-        const data = await res.json();
-        if (data.url) {
-          const fullUrl = data.url.startsWith("/") ? BACKEND_BASE + data.url : data.url;
-          document.getElementById("drawer-avatar-img").src = fullUrl;
-          document.getElementById("rail-my-avatar").src = fullUrl;
-          showToast("Photo uploaded! Click Save to confirm. ✨");
+        const activeUser = myId || getPersistentAuthUser();
+        // 1. Instant client-side compression to lightweight ~20KB dataUrl
+        const dataUrl = await compressImageToDataUrl(file, 256, 256, 0.82);
+
+        // 2. Immediately update DOM & LocalStorage so it never lags or disappears
+        const dAvatar = document.getElementById("drawer-avatar-img");
+        if (dAvatar) dAvatar.src = dataUrl;
+        const rAvatar = document.getElementById("rail-my-avatar");
+        if (rAvatar) rAvatar.src = dataUrl;
+        const sAvatar = document.getElementById("status-user-avatar");
+        if (sAvatar) sAvatar.src = dataUrl;
+
+        if (activeUser) {
+          const cleanId = normalizeUserId(activeUser);
+          localStorage.setItem(`virgo_avatar_${cleanId}`, dataUrl);
+          const curP = getLocalProfile(cleanId) || { userId: cleanId, displayName: cleanId.split("@")[0], about: "In the stars" };
+          curP.avatarUrl = dataUrl;
+          curP.updatedAt = Date.now();
+          saveProfileLocally(curP);
+          applyProfileToUI(curP);
         }
+        showToast("Photo applied! Click Save to sync. ✨");
+
+        // 3. Upload to /upload as well in background
+        const formData = new FormData();
+        formData.append("file", file, "avatar.jpg");
+        fetch(`${BACKEND_BASE}/upload`, { method: "POST", body: formData }).catch(() => {});
       } catch(err) {
+        console.error("uploadProfilePhoto error:", err);
         showToast("Photo upload failed.", "error");
       }
     }

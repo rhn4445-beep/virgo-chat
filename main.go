@@ -48,7 +48,7 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = "v2.8.4"
+var serverBuildTime = "v2.8.7"
 
 func normalizeUserID(raw string) string {
 	s := strings.ToLower(strings.TrimSpace(raw))
@@ -841,7 +841,7 @@ func handleProfile(db *sql.DB, hub *Hub) http.HandlerFunc {
 			err := db.QueryRow(query, target).Scan(&p.DisplayName, &p.About, &p.AvatarURL, &p.UpdatedAt)
 			if err != nil {
 				p.DisplayName = strings.Split(target, "@")[0]
-				p.About = "Hey there! I am using Virgo."
+				p.About = "In the stars"
 				p.AvatarURL = ""
 				p.UpdatedAt = time.Now().UnixMilli()
 			}
