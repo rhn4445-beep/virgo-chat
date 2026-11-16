@@ -48,7 +48,7 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = "v2.8.8"
+var serverBuildTime = "v2.8.9"
 
 func normalizeUserID(raw string) string {
 	s := strings.ToLower(strings.TrimSpace(raw))

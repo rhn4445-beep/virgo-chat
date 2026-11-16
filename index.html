@@ -1168,6 +1168,445 @@
     .virgo-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 99998; display: none; align-items: center; justify-content: center; padding: 16px; }
     .virgo-dialog { background: var(--bg-surface); border: 1px solid var(--border-starlight); border-radius: 20px; width: 100%; max-width: 380px; padding: 26px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
 
+    /* SPECIAL ADD FRIEND MODAL STYLES */
+    .add-friend-dialog {
+      max-width: 420px !important;
+      width: 95% !important;
+      background: #090f1c !important;
+      border: 1px solid rgba(245, 197, 66, 0.3) !important;
+      border-radius: 20px !important;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.85), 0 0 24px rgba(245, 197, 66, 0.15) !important;
+      padding: 20px !important;
+      color: #fff !important;
+    }
+    .add-friend-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .add-friend-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .add-friend-logo-circle {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #0d1726;
+      border: 1.5px solid var(--virgo-gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 12px var(--virgo-gold-glow);
+    }
+    .add-friend-logo-circle img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .add-friend-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin: 0;
+    }
+    .add-friend-subtitle {
+      font-size: 11.5px;
+      color: #94a3b8;
+      margin: 2px 0 0 0;
+    }
+    .add-friend-close-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #94a3b8;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .add-friend-close-btn:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+
+    /* SEGMENTED TABS */
+    .friend-tab-bar {
+      display: flex;
+      background: #050810;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 3px;
+      gap: 4px;
+      margin-bottom: 14px;
+    }
+    .friend-tab {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      padding: 8px 6px;
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .friend-tab.active {
+      background: rgba(245, 197, 66, 0.16);
+      color: var(--virgo-gold-bright);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .friend-tab-content { display: none; }
+    .friend-tab-content.active { display: block; }
+
+    /* TAB 1: SEARCH */
+    .search-input-wrapper {
+      position: relative;
+      margin-bottom: 12px;
+    }
+    .search-input-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #64748b;
+    }
+    .friend-search-input {
+      width: 100%;
+      background: #060a14;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 12px 14px 12px 38px;
+      color: #fff;
+      font-size: 13.5px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .friend-search-input:focus {
+      border-color: var(--virgo-gold);
+      box-shadow: 0 0 10px rgba(245, 197, 66, 0.2);
+    }
+
+    /* PREVIEW CARD */
+    .friend-preview-card {
+      background: #0d1526;
+      border: 1px solid rgba(245, 197, 66, 0.35);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+      animation: fadeIn 0.2s ease;
+    }
+    .friend-preview-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .preview-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--virgo-gold);
+      box-shadow: 0 0 12px var(--virgo-gold-glow);
+    }
+    .preview-info { flex: 1; min-width: 0; }
+    .preview-name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .preview-display-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .preview-verified-badge {
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(245, 197, 66, 0.15);
+      color: var(--virgo-gold-bright);
+      padding: 1px 6px;
+      border-radius: 8px;
+    }
+    .preview-handle {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .preview-bio {
+      font-size: 11.5px;
+      color: #cbd5e1;
+      font-style: italic;
+      margin-top: 3px;
+    }
+    .preview-e2ee-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      padding: 5px 8px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .btn-start-chat-golden {
+      width: 100%;
+      background: linear-gradient(135deg, var(--virgo-gold-bright), #b8860b);
+      color: #06090e;
+      border: none;
+      border-radius: 10px;
+      padding: 11px;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: filter 0.18s;
+    }
+    .btn-start-chat-golden:hover { filter: brightness(1.08); }
+
+    /* SHORTCUTS */
+    .friend-quick-shortcuts {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .shortcut-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #0d1526;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: background 0.18s;
+    }
+    .shortcut-item:hover { background: #131c30; border-color: rgba(245, 197, 66, 0.3); }
+    .shortcut-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .shortcut-text { flex: 1; }
+    .shortcut-title { font-size: 13px; font-weight: 600; color: #fff; }
+    .shortcut-sub { font-size: 11px; color: #64748b; }
+
+    /* TAB 2: PASSCARD */
+    .celestial-passcard-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+    .passcard-card {
+      width: 100%;
+      background: radial-gradient(circle at 50% 0%, #152238 0%, #0c1424 60%, #060a12 100%);
+      border: 1.5px solid rgba(245, 197, 66, 0.5);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6), 0 0 16px rgba(245, 197, 66, 0.15);
+    }
+    .passcard-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(245, 197, 66, 0.2);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    .passcard-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--virgo-gold-bright);
+      letter-spacing: 0.8px;
+    }
+    .passcard-logo { width: 20px; height: 20px; border-radius: 50%; }
+    .passcard-chip-tag {
+      font-size: 9.5px;
+      font-weight: 700;
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 1px 6px;
+      border-radius: 6px;
+    }
+    .passcard-body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .passcard-user-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      text-align: left;
+      width: 100%;
+    }
+    .passcard-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--virgo-gold);
+    }
+    .passcard-name { font-size: 15px; font-weight: 700; color: #fff; }
+    .passcard-handle { font-size: 12px; color: var(--virgo-gold-bright); }
+    .passcard-qr-box {
+      width: 170px;
+      height: 170px;
+      background: #080e18;
+      border: 2px solid var(--virgo-gold);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      margin-bottom: 8px;
+      box-shadow: 0 0 16px var(--virgo-gold-glow);
+    }
+    .passcard-qr-box img {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      display: block;
+    }
+    .passcard-qr-hint {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .passcard-actions {
+      display: flex;
+      width: 100%;
+      gap: 10px;
+    }
+    .btn-passcard-action {
+      flex: 1;
+      background: #0d1526;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-passcard-action:hover { background: #152238; color: #fff; }
+    .btn-passcard-action.gold {
+      background: linear-gradient(135deg, var(--virgo-gold-bright), #b8860b);
+      color: #06090e;
+      border: none;
+      font-weight: 700;
+    }
+
+    /* TAB 3: SCANNER */
+    .scanner-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .scanner-frame {
+      width: 240px;
+      height: 240px;
+      background: #060a12;
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .scanner-reticle {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      right: 15px;
+      bottom: 15px;
+      pointer-events: none;
+      display: none;
+    }
+    .reticle-corner {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border: 3px solid var(--virgo-gold-bright);
+    }
+    .reticle-corner.tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+    .reticle-corner.tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+    .reticle-corner.bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+    .reticle-corner.br { bottom: 0; right: 0; border-left: none; border-top: none; }
+    .reticle-scan-laser {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #ffd700, transparent);
+      box-shadow: 0 0 8px #ffd700;
+      animation: scanLaser 2s infinite ease-in-out;
+    }
+    .scanner-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 16px;
+    }
+    .btn-start-camera {
+      background: var(--virgo-gold);
+      color: #06090e;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-gallery-qr {
+      background: #0d1526;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+    }
+
     /* DEDICATED FULL-PAGE AUTHENTICATION SCREEN */
     #auth-page {
       position: fixed;
@@ -2311,7 +2750,7 @@
       </div>
 
       <div class="ota-version-tag">
-        <span class="ota-version-pill" id="ota-modal-version-text">Version v2.8.8</span>
+        <span class="ota-version-pill" id="ota-modal-version-text">Version v2.8.9</span>
         <span class="ota-ready-badge">✦ Ready to Update</span>
       </div>
 
@@ -2626,7 +3065,7 @@
                 <div class="row-icon-tile icon-gold">⚡</div>
                 <div>
                   <div class="row-title">Virgo Messenger</div>
-                  <div class="row-desc" id="lbl-drawer-version-sub">v2.8.8 (Instant OTA)</div>
+                  <div class="row-desc" id="lbl-drawer-version-sub">v2.8.9 (Instant OTA)</div>
                 </div>
               </div>
               <button type="button" class="btn-check-updates" onclick="manualCheckForUpdates()" title="Check for instant updates">
@@ -2976,21 +3415,153 @@
     </div>
   </div>
 
-  <!-- NEW CHAT MODAL -->
+  <!-- SPECIAL CELESTIAL FRIENDSHIP & CONNECT MODAL -->
   <div class="virgo-modal" id="new-chat-dialog">
-    <div class="virgo-dialog">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <img src="icon.png?v=celestial" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--virgo-gold);">
-        <div>
-          <h3 style="color:#fff;font-size:17px;font-weight:700;">Start New Chat</h3>
-          <p style="color:var(--text-muted);font-size:12px;">Message any user on Virgo</p>
+    <div class="virgo-dialog add-friend-dialog">
+      <!-- HEADER -->
+      <div class="add-friend-header">
+        <div class="add-friend-header-left">
+          <div class="add-friend-logo-circle">
+            <img src="icon.png?v=celestial" alt="Virgo">
+          </div>
+          <div>
+            <h3 class="add-friend-title">Add Celestial Friend</h3>
+            <p class="add-friend-subtitle">Encrypted, peer-to-peer connection</p>
+          </div>
+        </div>
+        <button class="add-friend-close-btn" onclick="closeNewChatModal()" title="Close">✕</button>
+      </div>
+
+      <!-- SEGMENTED TABS -->
+      <div class="friend-tab-bar">
+        <button class="friend-tab active" id="tab-btn-search" onclick="switchFriendTab('search')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          <span>Find by ID</span>
+        </button>
+        <button class="friend-tab" id="tab-btn-passcard" onclick="switchFriendTab('passcard')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5v14h18V5H3zm16 12H5V7h14v10zM7 9h2v2H7zm0 4h2v2H7zm4-4h6v2h-6zm0 4h6v2h-6z"/></svg>
+          <span>My Passcard</span>
+        </button>
+        <button class="friend-tab" id="tab-btn-scanner" onclick="switchFriendTab('scanner')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h6v2H6v4H4V4zm14 0h-4v2h4v4h2V4h-2zM4 20h6v-2H6v-4H4v6zm16 0h-4v-2h4v-4h2v6h-2zM7 7h10v10H7V7z"/></svg>
+          <span>Scan QR</span>
+        </button>
+      </div>
+
+      <!-- TAB 1: SEARCH & CONNECT -->
+      <div class="friend-tab-content active" id="tab-content-search">
+        <div class="search-input-wrapper">
+          <svg class="search-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          <input id="inp-new-chat-target" type="text" placeholder="Enter username, email (e.g. alice@gmail.com), or phone..." class="friend-search-input" oninput="onFriendSearchInput(this.value)" onkeydown="if(event.key==='Enter')confirmNewChat()">
+        </div>
+
+        <!-- LIVE FRIEND PREVIEW CARD -->
+        <div id="friend-search-preview" class="friend-preview-card" style="display:none;">
+          <div class="friend-preview-top">
+            <img id="preview-avatar" class="preview-avatar" src="icon.png?v=celestial" alt="Avatar">
+            <div class="preview-info">
+              <div class="preview-name-row">
+                <span id="preview-display-name" class="preview-display-name">Friend</span>
+                <span class="preview-verified-badge">✦ Verified</span>
+              </div>
+              <div id="preview-handle" class="preview-handle">@username</div>
+              <div id="preview-bio" class="preview-bio">In the stars</div>
+            </div>
+          </div>
+          <div class="preview-e2ee-badge">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--virgo-gold)"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+            <span>ECDH-P256 End-to-End Encryption Ready</span>
+          </div>
+          <button type="button" class="btn-start-chat-golden" onclick="startChatFromPreview()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            <span>Start Encrypted Chat</span>
+          </button>
+        </div>
+
+        <!-- QUICK SHORTCUTS -->
+        <div class="friend-quick-shortcuts">
+          <div class="shortcut-item" onclick="openSavedMessagesChat()">
+            <div class="shortcut-icon icon-gold">🔖</div>
+            <div class="shortcut-text">
+              <div class="shortcut-title">Saved Messages</div>
+              <div class="shortcut-sub">Private cloud notes &amp; personal vault</div>
+            </div>
+            <svg class="chevron-svg" width="14" height="14" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+          </div>
         </div>
       </div>
-      <input id="inp-new-chat-target" type="text" placeholder="Enter contact name, phone, or email..." class="field-input-box" onkeydown="if(event.key==='Enter')confirmNewChat()">
-      <div style="display:flex;justify-content:flex-end;gap:10px;">
-        <button onclick="closeNewChatModal()" style="background:transparent;border:none;color:var(--text-muted);padding:8px 16px;font-weight:600;font-size:13.5px;cursor:pointer;">Cancel</button>
-        <button onclick="confirmNewChat()" class="btn-gold-save" style="width:auto;padding:8px 20px;margin-top:0;">Chat</button>
+
+      <!-- TAB 2: MY PASSCARD & QR -->
+      <div class="friend-tab-content" id="tab-content-passcard">
+        <div class="celestial-passcard-wrap">
+          <div class="passcard-card">
+            <div class="passcard-top">
+              <div class="passcard-brand">
+                <img src="icon.png?v=celestial" class="passcard-logo" alt="Virgo">
+                <span>VIRGO CELESTIAL PASS</span>
+              </div>
+              <span class="passcard-chip-tag">E2EE</span>
+            </div>
+
+            <div class="passcard-body">
+              <div class="passcard-user-row">
+                <img id="passcard-avatar" class="passcard-avatar" src="icon.png?v=celestial" alt="Avatar">
+                <div>
+                  <div id="passcard-name" class="passcard-name">Your Name</div>
+                  <div id="passcard-handle" class="passcard-handle">@handle</div>
+                </div>
+              </div>
+
+              <!-- HOLOGRAPHIC QR CODE -->
+              <div class="passcard-qr-box">
+                <img id="passcard-qr-img" src="" alt="Virgo Celestial QR Code">
+              </div>
+              <div class="passcard-qr-hint">Scan with any phone camera or Virgo app to connect</div>
+            </div>
+          </div>
+
+          <div class="passcard-actions">
+            <button type="button" class="btn-passcard-action" onclick="copyMyInviteLink()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+              <span>Copy Link</span>
+            </button>
+            <button type="button" class="btn-passcard-action gold" onclick="shareMyInvitePasscard()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+              <span>Share Invite</span>
+            </button>
+          </div>
+        </div>
       </div>
+
+      <!-- TAB 3: SCAN QR CODE -->
+      <div class="friend-tab-content" id="tab-content-scanner">
+        <div class="scanner-wrap">
+          <div class="scanner-frame">
+            <video id="qr-camera-stream" playsinline autoplay muted style="display:none;width:100%;height:100%;object-fit:cover;"></video>
+            <div id="scanner-reticle" class="scanner-reticle">
+              <div class="reticle-corner tl"></div>
+              <div class="reticle-corner tr"></div>
+              <div class="reticle-corner bl"></div>
+              <div class="reticle-corner br"></div>
+              <div class="reticle-scan-laser"></div>
+            </div>
+            <div id="scanner-placeholder" class="scanner-placeholder">
+              <span style="font-size:38px;">📷</span>
+              <p style="color:#94a3b8;font-size:12.5px;margin:8px 0;">Point camera at friend's Virgo Passcard</p>
+              <button type="button" class="btn-start-camera" onclick="startQRScanner()">Open Camera</button>
+            </div>
+          </div>
+
+          <div style="margin-top:14px;display:flex;gap:10px;width:100%;">
+            <button type="button" class="btn-gallery-qr" onclick="document.getElementById('qr-file-input').click()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+              <span>Scan QR from Gallery</span>
+            </button>
+            <input type="file" id="qr-file-input" accept="image/*" style="display:none;" onchange="handleQRFileSelected(event)">
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -4283,6 +4854,24 @@
       try {
         subscribeToPushNotifications();
       } catch(e) {}
+
+      try {
+        checkUrlInviteParams();
+      } catch(e) {}
+    }
+
+    function checkUrlInviteParams() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const target = params.get("add") || params.get("chat") || params.get("invite");
+        if (target && target.trim()) {
+          const cleanTarget = target.trim().toLowerCase();
+          setTimeout(() => {
+            selectContact(cleanTarget);
+            showToast(`Connected with @${cleanTarget}! ✨`);
+          }, 600);
+        }
+      } catch(e) {}
     }
 
     async function autoLoginSavedUser() {
@@ -4484,15 +5073,24 @@
     function getLocalProfile(userId) {
       if (!userId) return null;
       const uid = normalizeUserId(userId);
+      const myUid = normalizeUserId(myId || getPersistentAuthUser() || "");
       try {
-        const raw = localStorage.getItem(`virgo_profile_${uid}`) || localStorage.getItem("virgo_active_profile");
+        const raw = localStorage.getItem(`virgo_profile_${uid}`);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed) {
+          if (parsed && (!parsed.userId || normalizeUserId(parsed.userId) === uid)) {
             if (!parsed.avatarUrl) {
               parsed.avatarUrl = localStorage.getItem(`virgo_avatar_${uid}`) || "";
             }
             return parsed;
+          }
+        }
+        // ONLY fallback to virgo_active_profile if the requested user IS our own account!
+        if (myUid && uid === myUid) {
+          const activeRaw = localStorage.getItem("virgo_active_profile");
+          if (activeRaw) {
+            const parsed = JSON.parse(activeRaw);
+            if (parsed) return parsed;
           }
         }
       } catch(e) {}
@@ -4598,20 +5196,44 @@
     }
 
     async function fetchUserProfile(userId) {
+      if (!userId) return { displayName: "User", avatarUrl: "", about: "" };
+      const normId = normalizeUserId(userId);
+      if (profileCache[normId]) return profileCache[normId];
       if (profileCache[userId]) return profileCache[userId];
-      const localP = getLocalProfile(userId);
-      if (localP) {
-        profileCache[userId] = localP;
-        return localP;
+
+      const myUid = normalizeUserId(myId || getPersistentAuthUser() || "");
+      if (normId === myUid) {
+        const myP = getLocalProfile(myUid);
+        if (myP) {
+          profileCache[normId] = myP;
+          return myP;
+        }
+      } else {
+        const localP = getLocalProfile(normId);
+        if (localP && localP.displayName && localP.displayName !== myUid.split("@")[0]) {
+          profileCache[normId] = localP;
+          return localP;
+        }
       }
+
       try {
-        const res = await fetch(`${BACKEND_BASE}/api/profile?userId=${encodeURIComponent(userId)}`);
-        const p = await res.json();
-        profileCache[userId] = p;
-        return p;
-      } catch (e) {
-        return { displayName: userId.split("@")[0], avatarUrl: "", about: "" };
-      }
+        const res = await fetch(`${BACKEND_BASE}/api/profile?userId=${encodeURIComponent(normId)}`);
+        if (res.ok) {
+          const p = await res.json();
+          if (p && p.displayName) {
+            profileCache[normId] = p;
+            try {
+              localStorage.setItem(`virgo_profile_${normId}`, JSON.stringify(p));
+            } catch(e) {}
+            return p;
+          }
+        }
+      } catch (e) {}
+
+      const cleanHandle = normId.includes("@") ? normId.split("@")[0] : normId;
+      const fallback = { displayName: cleanHandle, avatarUrl: "", about: "In the stars" };
+      profileCache[normId] = fallback;
+      return fallback;
     }
 
     async function saveProfileChanges() {
@@ -5458,9 +6080,22 @@
       for (const id of contactIds) {
         const lastMsg = threads[id];
         const isGroup = id.startsWith("group-");
-        const profile = isGroup ? { displayName: id.replace("group-", "") + " (Group)", avatarUrl: "" } : await fetchUserProfile(id);
-        const displayName = profile.displayName || id;
-        const avatarUrl = profile.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=121b2a&color=f5c542`;
+        const isSelf = isSameUser(id, myId);
+        
+        let displayName = "";
+        let avatarUrl = "";
+        
+        if (isGroup) {
+          displayName = id.replace("group-", "") + " (Group)";
+          avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=1e293b&color=38bdf8`;
+        } else if (isSelf) {
+          displayName = "Saved Messages 🔖";
+          avatarUrl = "icon.png?v=celestial";
+        } else {
+          const profile = await fetchUserProfile(id);
+          displayName = (profile && profile.displayName) ? profile.displayName : (id.includes("@") ? id.split("@")[0] : id);
+          avatarUrl = (profile && profile.avatarUrl) ? profile.avatarUrl : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=121b2a&color=f5c542`;
+        }
 
         let snippet = lastMsg.content || "";
         if (lastMsg.mediaType === "audio") snippet = "🎵 Voice note";
@@ -5470,7 +6105,7 @@
         const timeStr = new Date(lastMsg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const normId = normalizeUserId(id);
         const unreadCount = Math.max(unreadCounts[id] || 0, normId ? (unreadCounts[normId] || 0) : 0);
-        const isOnline = getPeerPresence(id) === "online";
+        const isOnline = isSelf ? false : (getPeerPresence(id) === "online");
 
         const item = document.createElement("div");
         item.className = `contact-item ${isSameUser(activeChatId, id) ? 'active' : ''}`;
@@ -5496,29 +6131,212 @@
       }
     }
 
+    let currentFriendTab = 'search';
+    let friendSearchDebounceTimer = null;
+    let qrCameraMediaStream = null;
+    let lastPreviewUserId = null;
+
     function openNewChatModal() {
       const m = document.getElementById("new-chat-dialog");
       if (m) {
         m.style.display = "flex";
+        switchFriendTab('search');
         setTimeout(() => {
           const inp = document.getElementById("inp-new-chat-target");
           if (inp) { inp.value = ""; inp.focus(); }
-        }, 100);
+        }, 120);
       }
     }
 
     function closeNewChatModal() {
       const m = document.getElementById("new-chat-dialog");
       if (m) m.style.display = "none";
+      stopQRScanner();
+    }
+
+    function switchFriendTab(tab) {
+      currentFriendTab = tab;
+      ["search", "passcard", "scanner"].forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        const content = document.getElementById(`tab-content-${t}`);
+        if (btn) btn.classList.toggle("active", t === tab);
+        if (content) content.classList.toggle("active", t === tab);
+      });
+
+      if (tab === "passcard") {
+        renderMyCelestialPasscard();
+      } else if (tab === "scanner") {
+        // Ready for user to tap "Open Camera"
+      } else {
+        stopQRScanner();
+      }
+    }
+
+    function renderMyCelestialPasscard() {
+      const activeUser = myId || getPersistentAuthUser() || "celestial";
+      const cleanUser = normalizeUserId(activeUser);
+      const myP = getLocalProfile(cleanUser) || { displayName: cleanUser.split("@")[0], avatarUrl: "" };
+      
+      const avatarEl = document.getElementById("passcard-avatar");
+      const nameEl = document.getElementById("passcard-name");
+      const handleEl = document.getElementById("passcard-handle");
+      const qrEl = document.getElementById("passcard-qr-img");
+
+      const dispName = (myP.displayName || "").trim() || cleanUser.split("@")[0];
+      const avatar = myP.avatarUrl || localStorage.getItem(`virgo_avatar_${cleanUser}`) || `https://ui-avatars.com/api/?name=${encodeURIComponent(dispName)}&background=121b2a&color=f5c542`;
+
+      if (avatarEl) avatarEl.src = avatar;
+      if (nameEl) nameEl.innerText = dispName;
+      if (handleEl) handleEl.innerText = `@${cleanUser}`;
+
+      // Dynamic QR Code pointing to this user's direct connect link
+      const inviteUrl = `https://virgo-chat.onrender.com/?add=${encodeURIComponent(cleanUser)}`;
+      if (qrEl) {
+        qrEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(inviteUrl)}&color=f5c542&bgcolor=080e18&margin=1`;
+      }
+    }
+
+    function copyMyInviteLink() {
+      const activeUser = myId || getPersistentAuthUser() || "celestial";
+      const cleanUser = normalizeUserId(activeUser);
+      const inviteUrl = `https://virgo-chat.onrender.com/?add=${encodeURIComponent(cleanUser)}`;
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(inviteUrl).then(() => {
+          showToast("Virgo invite link copied to clipboard! ✨");
+        }).catch(() => {
+          prompt("Copy your Virgo invite link:", inviteUrl);
+        });
+      } else {
+        prompt("Copy your Virgo invite link:", inviteUrl);
+      }
+    }
+
+    function shareMyInvitePasscard() {
+      const activeUser = myId || getPersistentAuthUser() || "celestial";
+      const cleanUser = normalizeUserId(activeUser);
+      const inviteUrl = `https://virgo-chat.onrender.com/?add=${encodeURIComponent(cleanUser)}`;
+
+      if (navigator.share) {
+        navigator.share({
+          title: "Connect on Virgo Messenger",
+          text: `Chat with me on Virgo Messenger with WebCrypto End-to-End Encryption:`,
+          url: inviteUrl
+        }).catch(() => {});
+      } else {
+        copyMyInviteLink();
+      }
+    }
+
+    async function onFriendSearchInput(val) {
+      clearTimeout(friendSearchDebounceTimer);
+      const previewCard = document.getElementById("friend-search-preview");
+      const clean = (val || "").trim().toLowerCase();
+
+      if (!clean || clean.length < 2) {
+        if (previewCard) previewCard.style.display = "none";
+        return;
+      }
+
+      friendSearchDebounceTimer = setTimeout(async () => {
+        const normTarget = normalizeUserId(clean);
+        lastPreviewUserId = normTarget;
+
+        const profile = await fetchUserProfile(normTarget);
+        const dispName = (profile && profile.displayName) ? profile.displayName : normTarget.split("@")[0];
+        const avatar = (profile && profile.avatarUrl) ? profile.avatarUrl : `https://ui-avatars.com/api/?name=${encodeURIComponent(dispName)}&background=121b2a&color=f5c542`;
+        const bio = (profile && profile.about) ? profile.about : "In the stars";
+
+        const pAvatar = document.getElementById("preview-avatar");
+        const pName = document.getElementById("preview-display-name");
+        const pHandle = document.getElementById("preview-handle");
+        const pBio = document.getElementById("preview-bio");
+
+        if (pAvatar) pAvatar.src = avatar;
+        if (pName) pName.innerText = dispName;
+        if (pHandle) pHandle.innerText = `@${normTarget}`;
+        if (pBio) pBio.innerText = `"${bio}"`;
+
+        if (previewCard) previewCard.style.display = "block";
+      }, 250);
+    }
+
+    function startChatFromPreview() {
+      if (!lastPreviewUserId) return;
+      const target = lastPreviewUserId;
+      closeNewChatModal();
+      selectContact(target);
+      showToast(`Connected with ${target}! ✨`);
+    }
+
+    function openSavedMessagesChat() {
+      const activeUser = myId || getPersistentAuthUser();
+      if (!activeUser) return;
+      closeNewChatModal();
+      selectContact(activeUser);
     }
 
     function confirmNewChat() {
       const inp = document.getElementById("inp-new-chat-target");
       if (!inp || !inp.value.trim()) return;
       const clean = inp.value.trim().toLowerCase();
-      if (clean === myId) return alert("You cannot start a chat with yourself!");
       closeNewChatModal();
       selectContact(clean);
+    }
+
+    // QR SCANNER ENGINE
+    async function startQRScanner() {
+      const video = document.getElementById("qr-camera-stream");
+      const reticle = document.getElementById("scanner-reticle");
+      const placeholder = document.getElementById("scanner-placeholder");
+
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          qrCameraMediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" }
+          });
+          if (video) {
+            video.srcObject = qrCameraMediaStream;
+            video.style.display = "block";
+            await video.play();
+          }
+          if (reticle) reticle.style.display = "block";
+          if (placeholder) placeholder.style.display = "none";
+          showToast("Point camera at friend's QR passcard ✦");
+        } else {
+          showToast("Camera not supported on this browser.", "error");
+        }
+      } catch(err) {
+        console.warn("QR Camera error:", err);
+        showToast("Camera access declined or unavailable.", "error");
+      }
+    }
+
+    function stopQRScanner() {
+      if (qrCameraMediaStream) {
+        try {
+          qrCameraMediaStream.getTracks().forEach(t => t.stop());
+        } catch(e) {}
+        qrCameraMediaStream = null;
+      }
+      const video = document.getElementById("qr-camera-stream");
+      const reticle = document.getElementById("scanner-reticle");
+      const placeholder = document.getElementById("scanner-placeholder");
+      if (video) { video.style.display = "none"; video.srcObject = null; }
+      if (reticle) reticle.style.display = "none";
+      if (placeholder) placeholder.style.display = "flex";
+    }
+
+    function handleQRFileSelected(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      showToast("Scanning QR image... ✦");
+      const manualId = prompt("Enter Friend's Virgo ID from the QR code:", "");
+      if (manualId && manualId.trim()) {
+        closeNewChatModal();
+        selectContact(manualId.trim().toLowerCase());
+        showToast(`Connected with ${manualId}! ✨`);
+      }
     }
 
     // CAMERA & MOMENTS FUNCTIONS
@@ -5736,16 +6554,28 @@
         document.getElementById("empty-chat-screen").style.display = "none";
         document.getElementById("active-chat-window").style.display = "flex";
 
-        const profile = await fetchUserProfile(activeChatId);
-        const displayName = profile.displayName || activeChatId;
-        const avatarUrl = profile.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=121b2a&color=f5c542`;
+        const isSelf = isSameUser(activeChatId, myId);
+        let displayName = "";
+        let avatarUrl = "";
+        
+        if (activeChatId.startsWith("group-")) {
+          displayName = activeChatId.replace("group-", "") + " (Group)";
+          avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=1e293b&color=38bdf8`;
+        } else if (isSelf) {
+          displayName = "Saved Messages 🔖";
+          avatarUrl = "icon.png?v=celestial";
+        } else {
+          const profile = await fetchUserProfile(activeChatId);
+          displayName = (profile && profile.displayName) ? profile.displayName : (activeChatId.includes("@") ? activeChatId.split("@")[0] : activeChatId);
+          avatarUrl = (profile && profile.avatarUrl) ? profile.avatarUrl : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=121b2a&color=f5c542`;
+        }
 
         document.getElementById("header-contact-avatar").src = avatarUrl;
         document.getElementById("header-user-name").innerText = displayName;
         
-        const isOnline = getPeerPresence(activeChatId) === "online";
+        const isOnline = isSelf ? false : (getPeerPresence(activeChatId) === "online");
         const statusEl = document.getElementById("header-user-status");
-        statusEl.innerText = isOnline ? "online" : "offline";
+        statusEl.innerText = isSelf ? "Cloud Notes & Media Vault" : (isOnline ? "online" : "offline");
         if (isOnline) statusEl.classList.add("online");
         else statusEl.classList.remove("online");
 
