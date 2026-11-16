@@ -9,8 +9,8 @@
   <title>Virgo — Celestial Messenger</title>
   
   <link rel="manifest" href="/manifest.json">
-  <link rel="icon" type="image/png" href="/icon.png">
-  <link rel="apple-touch-icon" href="/icon.png">
+  <link rel="icon" type="image/png" href="/icon.png?v=celestial">
+  <link rel="apple-touch-icon" href="/icon.png?v=celestial">
   <meta name="theme-color" content="#06090e">
   
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1530,7 +1530,7 @@
   <!-- DESKTOP LEFT NAVIGATION RAIL -->
   <div id="desktop-nav-rail">
     <div class="rail-logo-btn" onclick="location.reload()" title="Virgo Home">
-      <img src="icon.png" alt="Virgo">
+      <img src="icon.png?v=celestial" alt="Virgo">
     </div>
 
     <div class="rail-nav-items">
@@ -1549,7 +1549,7 @@
     </div>
 
     <div class="rail-profile-btn" onclick="toggleProfileDrawer(true)" title="My Profile">
-      <img id="rail-my-avatar" src="icon.png" alt="Profile">
+      <img id="rail-my-avatar" src="icon.png?v=celestial" alt="Profile">
     </div>
   </div>
 
@@ -1567,7 +1567,7 @@
 
     <div class="sidebar-header">
       <div class="sidebar-title-wrap">
-        <img class="mobile-logo-img" src="icon.png" alt="Virgo" onclick="applyInstantUpdate()" title="Virgo - Tap to check updates">
+        <img class="mobile-logo-img" src="icon.png?v=celestial" alt="Virgo" onclick="applyInstantUpdate()" title="Virgo - Tap to check updates">
         <div style="display:flex;flex-direction:column;gap:1px;text-align:left;">
           <div style="display:flex;align-items:center;gap:6px;">
             <span class="sidebar-title">Virgo</span>
@@ -1607,7 +1607,7 @@
       </div>
       <div class="story-item" onclick="alert('Virgo Starlight Feed active.')">
         <div class="story-ring">
-          <img class="story-avatar" src="icon.png" alt="Virgo">
+          <img class="story-avatar" src="icon.png?v=celestial" alt="Virgo">
         </div>
         <span class="story-name">Virgo ✦</span>
       </div>
@@ -1626,7 +1626,7 @@
     <!-- UPDATES / MOMENTS TAB VIEW -->
     <div id="updates-tab-view" style="display:none;flex:1;overflow-y:auto;padding:16px;">
       <div style="background:var(--bg-card);border:1px solid var(--border-starlight);border-radius:14px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="openCameraModal()">
-        <img id="status-user-avatar" src="icon.png" style="width:48px;height:48px;border-radius:50%;border:1.5px solid var(--virgo-gold);">
+        <img id="status-user-avatar" src="icon.png?v=celestial" style="width:48px;height:48px;border-radius:50%;border:1.5px solid var(--virgo-gold);">
         <div>
           <div style="font-weight:600;font-size:15px;color:#fff;">My Moment</div>
           <div style="font-size:12px;color:var(--text-muted);">Share an update with your contacts</div>
@@ -1680,7 +1680,7 @@
       </div>
       <div class="drawer-scroll-body">
         <div class="avatar-picker-wrap">
-          <img id="drawer-avatar-img" src="icon.png" alt="Avatar">
+          <img id="drawer-avatar-img" src="icon.png?v=celestial" alt="Avatar">
           <button class="avatar-camera-btn" onclick="document.getElementById('profile-pic-uploader').click()" title="Change photo">
             <svg viewBox="0 0 24 24"><path d="M12 12c1.65 0 3-1.35 3-3s-1.35-3-3-3-3 1.35-3 3 1.35 3 3 3zm0 2c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm6.5-6H17l-1.83-2H8.83L7 8H4.5C3.12 8 2 9.12 2 10.5v9C2 20.88 3.12 22 4.5 22h14c1.38 0 2.5-1.12 2.5-2.5v-9c0-1.38-1.12-2.5-2.5-2.5z"/></svg>
           </button>
@@ -1721,7 +1721,7 @@
     <!-- PLACEHOLDER WHEN NO CHAT IS OPEN -->
     <div id="empty-chat-screen">
       <div class="empty-symbol">
-        <img src="icon.png" alt="Virgo">
+        <img src="icon.png?v=celestial" alt="Virgo">
       </div>
       <h2 class="empty-headline">Virgo Messenger</h2>
       <div class="empty-subline">✦ Celestial Speed • End-to-End Encrypted ✦</div>
@@ -1737,7 +1737,7 @@
           <button id="chat-back-btn" onclick="closeChatMobile()" title="Back">
             <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
           </button>
-          <img id="header-contact-avatar" src="icon.png" alt="Avatar">
+          <img id="header-contact-avatar" src="icon.png?v=celestial" alt="Avatar">
           <div class="header-user-meta">
             <div id="header-user-name">Select Contact</div>
             <div class="header-status-line">
@@ -1872,7 +1872,7 @@
     <div class="auth-card">
       <div class="auth-brand" style="margin-bottom:20px;">
         <div class="auth-logo-halo">
-          <img src="icon.png" alt="Virgo" class="auth-logo-img">
+          <img src="icon.png?v=celestial" alt="Virgo" class="auth-logo-img">
         </div>
         <h1 class="auth-brand-name" style="margin-bottom:4px;">Virgo Messenger</h1>
         <p class="auth-brand-desc" style="margin:0;font-size:13px;color:var(--text-muted);">Celestial Speed &bull; End-to-End Encrypted</p>
@@ -1998,7 +1998,7 @@
   <div class="virgo-modal" id="new-chat-dialog">
     <div class="virgo-dialog">
       <div style="display:flex;align-items:center;gap:12px;">
-        <img src="icon.png" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--virgo-gold);">
+        <img src="icon.png?v=celestial" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--virgo-gold);">
         <div>
           <h3 style="color:#fff;font-size:17px;font-weight:700;">Start New Chat</h3>
           <p style="color:var(--text-muted);font-size:12px;">Message any user on Virgo</p>
@@ -2545,8 +2545,8 @@
           if (reg && reg.showNotification) {
             reg.showNotification(title, {
               body: body,
-              icon: '/icon.png',
-              badge: '/icon.png',
+              icon: '/icon.png?v=celestial',
+              badge: '/icon.png?v=celestial',
               vibrate: [200, 100, 200],
               data: { url: '/' }
             });
@@ -2557,7 +2557,7 @@
       // 4. Desktop browser fallback
       if ("Notification" in window && Notification.permission === "granted") {
         try {
-          new Notification(title, { body: body, icon: "icon.png" });
+          new Notification(title, { body: body, icon: "icon.png?v=celestial" });
         } catch(e) {}
       }
     }
@@ -4013,7 +4013,7 @@
       card.style = "background:var(--bg-card);border:1px solid var(--border-starlight);border-radius:14px;padding:14px;margin-bottom:10px;";
       card.innerHTML = `
         <div style="display:flex;align-items:center;gap:10px;">
-          <img src="icon.png" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--virgo-gold);">
+          <img src="icon.png?v=celestial" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--virgo-gold);">
           <div>
             <div style="font-weight:700;color:var(--virgo-gold-bright);">${myId}</div>
             <div style="font-size:11px;color:var(--text-muted);">Just now</div>
