@@ -1003,6 +1003,20 @@
       transform: translateY(-1px);
     }
     .auth-submit-btn:active { transform: translateY(1px); }
+    @keyframes auth-spin {
+      to { transform: rotate(360deg); }
+    }
+    .auth-spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: auth-spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
 
     .btn-google-action {
       display: inline-flex;
@@ -1868,13 +1882,10 @@
       <!-- AUTH TABS -->
       <div class="auth-tabs">
         <button type="button" class="auth-tab-btn active" id="tab-btn-gmail" onclick="switchAuthTab('gmail')">
-          <svg width="15" height="15" viewBox="0 0 24 24" style="flex-shrink:0;">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
           </svg>
-          <span>Gmail</span>
+          <span>Email OTP</span>
         </button>
         <button type="button" class="auth-tab-btn" id="tab-btn-phone" onclick="switchAuthTab('phone')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -1890,41 +1901,64 @@
         </button>
       </div>
 
-      <!-- PANEL 1: GMAIL -->
+      <!-- PANEL 1: EMAIL OTP -->
       <div class="auth-panel" id="auth-panel-gmail">
-        <label class="auth-field-label">Google / Gmail Account</label>
-        
-        <button type="button" class="btn-google-action" onclick="openGoogleInAppPopup()">
-          <svg width="20" height="20" viewBox="0 0 24 24" style="flex-shrink:0;">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-          </svg>
-          <span>Sign In with Google (In-App Popup)</span>
-        </button>
+        <!-- STEP 1: Request Code -->
+        <div id="otp-step-1" style="width:100%;display:flex;flex-direction:column;gap:12px;">
+          <div style="text-align:center;margin-bottom:2px;">
+            <div style="font-size:14px;font-weight:600;color:#fff;">Sign in with Email OTP</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Enter your email to receive a secure 6-digit verification code.</div>
+          </div>
 
-        <div style="display:flex;align-items:center;gap:10px;margin:2px 0 8px;width:100%;">
-          <div style="flex:1;height:1px;background:var(--border-subtle);"></div>
-          <span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">or sign in directly</span>
-          <div style="flex:1;height:1px;background:var(--border-subtle);"></div>
+          <label class="auth-field-label" style="margin-bottom:0;">Email Address</label>
+          <div class="auth-input-wrap">
+            <svg class="auth-input-icon" viewBox="0 0 24 24" fill="var(--virgo-gold)">
+              <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+            </svg>
+            <input type="email" id="auth-otp-email" class="auth-text-input" placeholder="e.g. rhn4445@gmail.com" value="rhn4445@gmail.com" onkeydown="if(event.key==='Enter')sendEmailOTP()">
+          </div>
+
+          <div class="auth-pills-row">
+            <span style="font-size:10.5px;color:var(--text-muted);">Quick fill:</span>
+            <button type="button" class="auth-pill-chip" onclick="quickFillOtpEmail('rhn4445@gmail.com')">rhn4445@gmail.com</button>
+            <button type="button" class="auth-pill-chip" onclick="quickAppendOtpDomain()">+ @gmail.com</button>
+          </div>
+
+          <button type="button" id="btn-send-otp" class="auth-submit-btn" onclick="sendEmailOTP()">
+            <span>Send 6-Digit Code</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>
+          </button>
         </div>
 
-        <div class="auth-input-wrap">
-          <svg class="auth-input-icon" viewBox="0 0 24 24" fill="var(--virgo-gold)">
-            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-          </svg>
-          <input type="text" id="auth-inp-gmail" class="auth-text-input" placeholder="e.g. rhn4445 or user@gmail.com" onkeydown="if(event.key==='Enter')submitAuthGmail()">
+        <!-- STEP 2: Enter 6-digit Code -->
+        <div id="otp-step-2" style="width:100%;display:none;flex-direction:column;gap:12px;">
+          <div style="text-align:center;margin-bottom:2px;">
+            <div style="font-size:14px;font-weight:600;color:#fff;">Enter Verification Code</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Code sent to <span id="otp-target-display" style="color:var(--virgo-gold);font-weight:600;"></span></div>
+          </div>
+
+          <label class="auth-field-label" style="margin-bottom:0;">6-Digit Code</label>
+          <div class="auth-input-wrap">
+            <svg class="auth-input-icon" viewBox="0 0 24 24" fill="var(--virgo-gold)">
+              <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+            </svg>
+            <input type="text" id="auth-otp-code" class="auth-text-input" placeholder="• • • • • •" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" style="letter-spacing:10px;font-size:22px;text-align:center;font-weight:700;" onkeydown="if(event.key==='Enter')verifyEmailOTP()">
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 4px;font-size:12px;">
+            <span id="otp-timer-text" style="color:var(--text-muted);">Resend in <b id="otp-countdown" style="color:var(--virgo-gold);">30</b>s</span>
+            <button type="button" id="btn-resend-otp" onclick="resendEmailOTP()" style="display:none;background:none;border:none;color:var(--virgo-gold);cursor:pointer;font-weight:600;font-size:12px;padding:0;">Resend Code</button>
+            <button type="button" onclick="backToEmailStep()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:0;text-decoration:underline;">← Change Email</button>
+          </div>
+
+          <button type="button" id="btn-verify-otp" class="auth-submit-btn" onclick="verifyEmailOTP()">
+            <span>Verify &amp; Enter Virgo</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </button>
         </div>
-        <div class="auth-pills-row">
-          <span style="font-size:10.5px;color:var(--text-muted);">Quick fill:</span>
-          <button type="button" class="auth-pill-chip" onclick="quickAppendGmailDomain()">+ @gmail.com</button>
-          <button type="button" class="auth-pill-chip" onclick="quickFillGmail('rhn4445@gmail.com')">rhn4445@gmail.com</button>
-        </div>
-        <button type="button" class="auth-submit-btn" onclick="submitAuthGmail()">
-          <span>Enter with Gmail</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>
-        </button>
+
+        <!-- Notification / Error Box -->
+        <div id="otp-status-msg" style="display:none;width:100%;border-radius:10px;padding:10px 14px;font-size:12px;line-height:1.4;text-align:center;margin-top:4px;"></div>
       </div>
 
       <!-- PANEL 2: PHONE NUMBER -->
@@ -1975,60 +2009,6 @@
           <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
         </svg>
         <span>End-to-End Encrypted with WebCrypto ECDH-P256 &amp; AES-GCM</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- GOOGLE IN-APP POPUP WINDOW / DIALOG -->
-  <div class="virgo-modal" id="google-inapp-popup-modal" style="display:none;z-index:9999999;">
-    <div class="virgo-dialog" style="max-width:380px;padding:26px 22px;border:1px solid rgba(245,197,66,0.4);box-shadow:0 25px 60px rgba(0,0,0,0.9);">
-      
-      <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:16px;">
-        <svg width="38" height="38" viewBox="0 0 24 24" style="margin-bottom:8px;">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-        </svg>
-        <h3 style="color:#fff;font-size:18px;font-weight:700;margin:0 0 4px;">Sign in with Google</h3>
-        <p style="color:var(--text-muted);font-size:12px;margin:0;line-height:1.4;">Choose an account to continue to Virgo Celestial Messenger</p>
-      </div>
-
-      <div style="display:flex;flex-direction:column;gap:10px;width:100%;margin-bottom:14px;">
-        <div class="google-acc-card" onclick="selectGoogleAccount('rhn4445@gmail.com')">
-          <div class="google-acc-avatar">R</div>
-          <div style="flex:1;text-align:left;">
-            <div style="color:#fff;font-size:13.5px;font-weight:600;">Rohan</div>
-            <div style="color:var(--text-muted);font-size:11.5px;">rhn4445@gmail.com</div>
-          </div>
-          <span style="font-size:11px;color:var(--virgo-gold-bright);font-weight:700;background:rgba(245,197,66,0.1);padding:4px 8px;border-radius:12px;border:1px solid rgba(245,197,66,0.25);">Tap to sign in</span>
-        </div>
-      </div>
-
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;width:100%;">
-        <div style="flex:1;height:1px;background:var(--border-subtle);"></div>
-        <span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">or use another account</span>
-        <div style="flex:1;height:1px;background:var(--border-subtle);"></div>
-      </div>
-
-      <div class="auth-input-wrap" style="margin-bottom:14px;">
-        <svg class="auth-input-icon" viewBox="0 0 24 24" fill="var(--virgo-gold)">
-          <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-        </svg>
-        <input type="text" id="popup-google-email" class="auth-text-input" placeholder="e.g. user@gmail.com" onkeydown="if(event.key==='Enter')confirmGooglePopupLogin()">
-      </div>
-
-      <div style="display:flex;gap:10px;width:100%;">
-        <button type="button" onclick="closeGoogleInAppPopup()" style="flex:1;background:transparent;border:1px solid var(--border-subtle);color:var(--text-muted);padding:11px;border-radius:14px;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
-        <button type="button" onclick="confirmGooglePopupLogin()" class="auth-submit-btn" style="flex:1.6;margin-top:0;padding:11px;">
-          <span>Sign In</span>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>
-        </button>
-      </div>
-
-      <div style="margin-top:14px;font-size:10.5px;color:var(--text-muted);display:flex;align-items:center;justify-content:center;gap:6px;">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--virgo-gold)"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-        <span>Direct In-App Popup • Zero External Redirects</span>
       </div>
     </div>
   </div>
@@ -2685,42 +2665,206 @@
       }
     }
 
-    function openGoogleInAppPopup() {
-      const modal = document.getElementById("google-inapp-popup-modal");
-      if (modal) {
-        modal.style.display = "flex";
-        const inp = document.getElementById("popup-google-email");
-        if (inp) {
-          inp.value = "";
-          setTimeout(() => inp.focus(), 150);
+    let otpCountdownTimer = null;
+    let currentOtpEmail = "";
+
+    async function sendEmailOTP() {
+      const emailInp = document.getElementById("auth-otp-email");
+      const btn = document.getElementById("btn-send-otp");
+      
+      if (!emailInp || !emailInp.value.trim()) {
+        showOtpError("Please enter your email address.");
+        if (emailInp) emailInp.focus();
+        return;
+      }
+      
+      let email = emailInp.value.trim().toLowerCase();
+      if (!email.includes("@")) {
+        email += "@gmail.com";
+        emailInp.value = email;
+      }
+      
+      currentOtpEmail = email;
+      
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="auth-spinner"></span> Sending Code...`;
+      }
+      const msgEl = document.getElementById("otp-status-msg");
+      if (msgEl) msgEl.style.display = "none";
+      
+      try {
+        const res = await fetch("/api/auth/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email })
+        });
+        const data = await res.json();
+        
+        if (res.ok && data.status === "otp_sent") {
+          document.getElementById("otp-step-1").style.display = "none";
+          document.getElementById("otp-step-2").style.display = "flex";
+          document.getElementById("otp-target-display").innerText = email;
+          
+          const codeInp = document.getElementById("auth-otp-code");
+          if (codeInp) {
+            codeInp.value = "";
+            setTimeout(() => codeInp.focus(), 150);
+          }
+          
+          startOtpCountdown(30);
+          showOtpSuccess("Verification code sent! Check your inbox.");
+        } else {
+          showOtpError(data.message || "Failed to send code. Please try again.");
+        }
+      } catch (err) {
+        console.error("sendEmailOTP error:", err);
+        showOtpError("Network error connecting to server. Please try again.");
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<span>Send 6-Digit Code</span><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>`;
         }
       }
     }
 
-    function closeGoogleInAppPopup() {
-      const modal = document.getElementById("google-inapp-popup-modal");
-      if (modal) modal.style.display = "none";
-    }
-
-    function selectGoogleAccount(email) {
-      closeGoogleInAppPopup();
-      localStorage.setItem("virgo_auth_user", email);
-      hideAuthPage();
-      initAuthenticatedSession(email);
-    }
-
-    function confirmGooglePopupLogin() {
-      const inp = document.getElementById("popup-google-email");
-      if (!inp || !inp.value.trim()) {
-        alert("Please enter a valid Google email address.");
-        if (inp) inp.focus();
+    async function verifyEmailOTP() {
+      const codeInp = document.getElementById("auth-otp-code");
+      const btn = document.getElementById("btn-verify-otp");
+      
+      if (!codeInp || !codeInp.value.trim()) {
+        showOtpError("Please enter the 6-digit code.");
+        if (codeInp) codeInp.focus();
         return;
       }
-      let email = inp.value.trim().toLowerCase();
-      if (!email.includes("@")) {
-        email += "@gmail.com";
+      
+      const otp = codeInp.value.trim();
+      if (otp.length !== 6) {
+        showOtpError("Please enter all 6 digits.");
+        if (codeInp) codeInp.focus();
+        return;
       }
-      selectGoogleAccount(email);
+      
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="auth-spinner"></span> Verifying...`;
+      }
+      
+      try {
+        const res = await fetch("/api/auth/verify-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: currentOtpEmail, otp: otp })
+        });
+        const data = await res.json();
+        
+        if (res.ok && data.status === "authenticated") {
+          showOtpSuccess("Verified! Signing you into Virgo...");
+          
+          localStorage.setItem("virgo_auth_user", data.userId);
+          if (data.token) {
+            localStorage.setItem("virgo_auth_token", data.token);
+          }
+          
+          setTimeout(() => {
+            hideAuthPage();
+            initAuthenticatedSession(data.userId);
+          }, 400);
+        } else {
+          showOtpError(data.message || "Incorrect verification code. Please check and try again.");
+        }
+      } catch (err) {
+        console.error("verifyEmailOTP error:", err);
+        showOtpError("Network error verifying code. Please try again.");
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<span>Verify &amp; Enter Virgo</span><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
+        }
+      }
+    }
+
+    function backToEmailStep() {
+      if (otpCountdownTimer) clearInterval(otpCountdownTimer);
+      document.getElementById("otp-step-2").style.display = "none";
+      document.getElementById("otp-step-1").style.display = "flex";
+      const msgEl = document.getElementById("otp-status-msg");
+      if (msgEl) msgEl.style.display = "none";
+      const emailInp = document.getElementById("auth-otp-email");
+      if (emailInp) emailInp.focus();
+    }
+
+    function resendEmailOTP() {
+      const resendBtn = document.getElementById("btn-resend-otp");
+      if (resendBtn) resendBtn.style.display = "none";
+      const timerText = document.getElementById("otp-timer-text");
+      if (timerText) timerText.style.display = "inline";
+      sendEmailOTP();
+    }
+
+    function startOtpCountdown(seconds) {
+      if (otpCountdownTimer) clearInterval(otpCountdownTimer);
+      let remaining = seconds;
+      const countEl = document.getElementById("otp-countdown");
+      const timerText = document.getElementById("otp-timer-text");
+      const resendBtn = document.getElementById("btn-resend-otp");
+      
+      if (timerText) timerText.style.display = "inline";
+      if (resendBtn) resendBtn.style.display = "none";
+      if (countEl) countEl.innerText = remaining;
+      
+      otpCountdownTimer = setInterval(() => {
+        remaining--;
+        if (countEl) countEl.innerText = remaining;
+        if (remaining <= 0) {
+          clearInterval(otpCountdownTimer);
+          if (timerText) timerText.style.display = "none";
+          if (resendBtn) resendBtn.style.display = "inline";
+        }
+      }, 1000);
+    }
+
+    function showOtpError(msg) {
+      const el = document.getElementById("otp-status-msg");
+      if (el) {
+        el.style.display = "block";
+        el.style.backgroundColor = "rgba(239, 68, 68, 0.15)";
+        el.style.border = "1px solid rgba(239, 68, 68, 0.4)";
+        el.style.color = "#f87171";
+        el.innerText = msg;
+      }
+    }
+
+    function showOtpSuccess(msg) {
+      const el = document.getElementById("otp-status-msg");
+      if (el) {
+        el.style.display = "block";
+        el.style.backgroundColor = "rgba(16, 185, 129, 0.15)";
+        el.style.border = "1px solid rgba(16, 185, 129, 0.4)";
+        el.style.color = "#34d399";
+        el.innerText = msg;
+      }
+    }
+
+    function quickFillOtpEmail(email) {
+      const inp = document.getElementById("auth-otp-email");
+      if (inp) {
+        inp.value = email;
+        inp.focus();
+      }
+    }
+
+    function quickAppendOtpDomain() {
+      const inp = document.getElementById("auth-otp-email");
+      if (!inp) return;
+      let val = inp.value.trim();
+      if (!val) {
+        inp.value = "@gmail.com";
+        inp.setSelectionRange(0, 0);
+      } else if (!val.includes("@")) {
+        inp.value = val + "@gmail.com";
+      }
+      inp.focus();
     }
 
     function showAuthPage() {
@@ -2728,7 +2872,7 @@
       if (page) {
         page.style.display = "flex";
         setTimeout(() => {
-          const inp = document.getElementById("auth-inp-gmail");
+          const inp = document.getElementById("auth-otp-email");
           if (inp) inp.focus();
         }, 150);
       }
@@ -2741,8 +2885,6 @@
       if (oldModal) oldModal.style.display = "none";
       const gModal = document.getElementById("gmail-login-modal");
       if (gModal) gModal.style.display = "none";
-      const googleModal = document.getElementById("google-inapp-popup-modal");
-      if (googleModal) googleModal.style.display = "none";
     }
 
     function switchAuthTab(tab) {
@@ -2755,7 +2897,7 @@
       if (panel) panel.style.display = "flex";
 
       if (tab === "gmail") {
-        const inp = document.getElementById("auth-inp-gmail");
+        const inp = document.getElementById("auth-otp-email");
         if (inp) setTimeout(() => inp.focus(), 100);
       } else if (tab === "phone") {
         const inp = document.getElementById("auth-inp-phone");
@@ -2764,43 +2906,6 @@
         const inp = document.getElementById("auth-inp-custom");
         if (inp) setTimeout(() => inp.focus(), 100);
       }
-    }
-
-    function quickFillGmail(email) {
-      const inp = document.getElementById("auth-inp-gmail");
-      if (inp) {
-        inp.value = email;
-        inp.focus();
-      }
-    }
-
-    function quickAppendGmailDomain() {
-      const inp = document.getElementById("auth-inp-gmail");
-      if (!inp) return;
-      let val = inp.value.trim();
-      if (!val) {
-        inp.value = "@gmail.com";
-        inp.setSelectionRange(0, 0);
-      } else if (!val.includes("@")) {
-        inp.value = val + "@gmail.com";
-      }
-      inp.focus();
-    }
-
-    function submitAuthGmail() {
-      const inp = document.getElementById("auth-inp-gmail");
-      if (!inp || !inp.value.trim()) {
-        alert("Please enter your Gmail username or address.");
-        if (inp) inp.focus();
-        return;
-      }
-      let email = inp.value.trim().toLowerCase();
-      if (!email.includes("@")) {
-        email += "@gmail.com";
-      }
-      localStorage.setItem("virgo_auth_user", email);
-      hideAuthPage();
-      initAuthenticatedSession(email);
     }
 
     function submitAuthPhone() {
@@ -2848,11 +2953,13 @@
     }
 
     function confirmGmailLogin() {
-      submitAuthGmail();
+      showAuthPage();
+      switchAuthTab("gmail");
     }
 
     function handleWelcomeLogin() {
-      submitAuthGmail();
+      showAuthPage();
+      switchAuthTab("gmail");
     }
 
     function logout() {

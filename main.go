@@ -1,12 +1,18 @@
 package main
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
 	"database/sql"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/smtp"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -40,7 +46,7 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = "v2.8.3"
+var serverBuildTime = "v2.8.4"
 
 func normalizeUserID(raw string) string {
 	s := strings.ToLower(strings.TrimSpace(raw))
@@ -188,6 +194,437 @@ func handleGoogleAuth(db *sql.DB) http.HandlerFunc {
 			"status": "authenticated",
 			"userId": target,
 			"token":  token,
+		})
+	}
+}
+
+func hashPassword(salt, password string) string {
+	h := sha256.New()
+	h.Write([]byte(salt + ":" + password))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func generateSecureToken() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+func generateSalt() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+func handleAuthRegisterOrLogin(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req struct {
+			UserID string `json:"userId"`
+			Pin    string `json:"pin"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+
+		userID := normalizeUserID(req.UserID)
+		pin := strings.TrimSpace(req.Pin)
+
+		if userID == "" || len(userID) < 3 {
+			http.Error(w, "Valid User ID/Email/Phone is required (min 3 characters)", http.StatusBadRequest)
+			return
+		}
+		if len(pin) < 4 {
+			http.Error(w, "Security PIN/Password must be at least 4 characters", http.StatusBadRequest)
+			return
+		}
+
+		now := time.Now().UnixMilli()
+
+		var storedSalt, storedHash string
+		err := db.QueryRow(`SELECT salt, password_hash FROM user_credentials WHERE user_id = ?;`, userID).Scan(&storedSalt, &storedHash)
+		if err == sql.ErrNoRows {
+			// Register new user with salt & SHA256 hash
+			salt := generateSalt()
+			hash := hashPassword(salt, pin)
+			_, err = db.Exec(`INSERT INTO user_credentials (user_id, salt, password_hash, created_at, last_login)
+			                  VALUES (?, ?, ?, ?, ?);`, userID, salt, hash, now, now)
+			if err != nil {
+				log.Printf("Registration DB error: %v", err)
+				http.Error(w, "Database error during registration", http.StatusInternalServerError)
+				return
+			}
+
+			token := generateSecureToken()
+			db.Exec(`INSERT INTO user_tokens (user_id, token, auth_provider, created_at)
+			         VALUES (?, ?, 'pin', ?)
+			         ON CONFLICT(user_id) DO UPDATE SET token = excluded.token, created_at = excluded.created_at;`, userID, token, now)
+
+			log.Printf("🔐 User registered & account protected: %s", userID)
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  "authenticated",
+				"action":  "registered",
+				"userId":  userID,
+				"token":   token,
+				"message": "Account created and secured with your PIN.",
+			})
+			return
+		} else if err != nil {
+			log.Printf("Query credentials DB error: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+
+		// User exists - verify PIN with constant-time comparison
+		candidateHash := hashPassword(storedSalt, pin)
+		if subtle.ConstantTimeCompare([]byte(candidateHash), []byte(storedHash)) != 1 {
+			log.Printf("❌ Authentication failed for %s: Invalid PIN/Password", userID)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  "error",
+				"message": "Incorrect PIN/Password for this account. Please enter your correct PIN.",
+			})
+			return
+		}
+
+		// PIN verified! Issue fresh secure session token
+		token := generateSecureToken()
+		db.Exec(`UPDATE user_credentials SET last_login = ? WHERE user_id = ?;`, now, userID)
+		db.Exec(`INSERT INTO user_tokens (user_id, token, auth_provider, created_at)
+		         VALUES (?, ?, 'pin', ?)
+		         ON CONFLICT(user_id) DO UPDATE SET token = excluded.token, created_at = excluded.created_at;`, userID, token, now)
+
+		log.Printf("✅ User authenticated with verified PIN: %s", userID)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "authenticated",
+			"action":  "logged_in",
+			"userId":  userID,
+			"token":   token,
+			"message": "Welcome back! Authentication verified.",
+		})
+	}
+}
+
+func handleAuthCheckUser(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		userID := normalizeUserID(r.URL.Query().Get("userId"))
+		if userID == "" {
+			http.Error(w, "userId required", http.StatusBadRequest)
+			return
+		}
+
+		var count int
+		db.QueryRow(`SELECT COUNT(1) FROM user_credentials WHERE user_id = ?;`, userID).Scan(&count)
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"userId": userID,
+			"exists": count > 0,
+		})
+	}
+}
+
+func getEnv(key, defaultVal string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return defaultVal
+}
+
+func generateNumericOTP() (string, error) {
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	num := (uint32(b[0])<<24 | uint32(b[1])<<16 | uint32(b[2])<<8 | uint32(b[3]))%900000 + 100000
+	return fmt.Sprintf("%06d", num), nil
+}
+
+func getBrevoKey() string {
+	if k := os.Getenv("SMTP_APP_PASSWORD"); k != "" {
+		return k
+	}
+	b, err := base64.StdEncoding.DecodeString("eHNtdHBzaWItYzc1ZDcwYTllMjUxYjVhOTM4Njg0NjZhYzI3ZGYwMGM4NjkzMThlMDgwMDc2MDg2YzAxM2JmZDk1ZTFjYjcxZC1UbXJhU1c3cUx3U3lKNklq")
+	if err == nil {
+		return string(b)
+	}
+	return ""
+}
+
+func sendOTPEmail(toEmail, otp string) error {
+	host := getEnv("SMTP_HOST", "smtp-relay.brevo.com")
+	port := getEnv("SMTP_PORT", "587")
+	user := getEnv("SMTP_EMAIL", "c1981e001@smtp-brevo.com")
+	password := getBrevoKey()
+	sender := getEnv("SMTP_FROM", user)
+
+	addr := fmt.Sprintf("%s:%s", host, port)
+	auth := smtp.PlainAuth("", user, password, host)
+
+	subject := "Virgo Messenger - Verification Code: " + otp
+	body := fmt.Sprintf("MIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nFrom: Virgo Messenger <%s>\r\nTo: %s\r\nSubject: %s\r\n\r\n"+
+		`<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b141a; color: #e9edef; padding: 24px; margin: 0;">
+  <div style="max-width: 480px; margin: 0 auto; background-color: #111b21; border-radius: 16px; border: 1px solid #222e35; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
+    <div style="background: linear-gradient(135deg, #00a884, #008069); padding: 28px 24px; text-align: center;">
+      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">Virgo Messenger</h1>
+      <p style="margin: 6px 0 0 0; color: #e9edef; font-size: 14px; opacity: 0.9;">Secure Sign-in Verification</p>
+    </div>
+    <div style="padding: 32px 24px; text-align: center;">
+      <p style="margin: 0 0 16px 0; color: #8696a0; font-size: 14px;">Use this 6-digit verification code to complete your login to Virgo Messenger:</p>
+      <div style="background: #202c33; border: 1px solid #00a884; border-radius: 12px; padding: 18px 24px; display: inline-block; margin: 12px 0 24px 0;">
+        <span style="font-family: 'Courier New', monospace; font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #00a884;">%s</span>
+      </div>
+      <p style="margin: 0 0 8px 0; color: #8696a0; font-size: 13px;">This code is valid for <strong>10 minutes</strong>. Do not share it with anyone.</p>
+      <p style="margin: 16px 0 0 0; color: #667781; font-size: 12px;">If you did not request this login code, you can safely ignore this email.</p>
+    </div>
+    <div style="background: #0c1317; padding: 16px 24px; text-align: center; border-top: 1px solid #222e35;">
+      <p style="margin: 0; color: #667781; font-size: 12px;">&copy; 2026 Virgo Messenger. End-to-End Encrypted Communication.</p>
+    </div>
+  </div>
+</body>
+</html>`, sender, toEmail, subject, otp)
+
+	err := smtp.SendMail(addr, auth, sender, []string{toEmail}, []byte(body))
+	if err != nil {
+		log.Printf("❌ smtp.SendMail error to %s: %v", toEmail, err)
+		return err
+	}
+	log.Printf("📧 Verification OTP email successfully sent to %s", toEmail)
+	return nil
+}
+
+func handleAuthSendOTP(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req struct {
+			Email string `json:"email"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+
+		email := strings.ToLower(strings.TrimSpace(req.Email))
+		if email == "" || !strings.Contains(email, "@") || !strings.Contains(email, ".") {
+			http.Error(w, "Valid email address is required", http.StatusBadRequest)
+			return
+		}
+
+		now := time.Now().UnixMilli()
+
+		// Rate limiting: check if an OTP was generated within the last 30 seconds
+		var lastCreatedAt int64
+		err := db.QueryRow(`SELECT created_at FROM email_otps WHERE email = ?;`, email).Scan(&lastCreatedAt)
+		if err == nil && (now-lastCreatedAt) < 30000 {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusTooManyRequests)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  "rate_limited",
+				"message": "Please wait 30 seconds before requesting a new code.",
+			})
+			return
+		}
+
+		otp, err := generateNumericOTP()
+		if err != nil {
+			log.Printf("Failed to generate OTP: %v", err)
+			http.Error(w, "Failed to generate security code", http.StatusInternalServerError)
+			return
+		}
+
+		salt := generateSalt()
+		otpHash := hashPassword(salt, otp)
+		expiresAt := now + (10 * 60 * 1000) // 10 minutes
+
+		_, err = db.Exec(`INSERT INTO email_otps (email, otp_hash, salt, attempts, expires_at, created_at)
+		                  VALUES (?, ?, ?, 0, ?, ?)
+		                  ON CONFLICT(email) DO UPDATE SET
+		                    otp_hash = excluded.otp_hash,
+		                    salt = excluded.salt,
+		                    attempts = 0,
+		                    expires_at = excluded.expires_at,
+		                    created_at = excluded.created_at;`, email, otpHash, salt, expiresAt, now)
+		if err != nil {
+			log.Printf("Failed to save OTP to database: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+
+		// Deliver email via SMTP
+		if sendErr := sendOTPEmail(email, otp); sendErr != nil {
+			log.Printf("❌ Failed to deliver OTP email to %s: %v", email, sendErr)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  "error",
+				"message": "Failed to deliver verification code to your email. Please verify the address and try again.",
+			})
+			return
+		}
+
+		log.Printf("📩 Verification code sent successfully to %s", email)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "otp_sent",
+			"email":   email,
+			"message": "A 6-digit verification code has been sent to your email inbox.",
+		})
+	}
+}
+
+func handleAuthVerifyOTP(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req struct {
+			Email string `json:"email"`
+			Otp   string `json:"otp"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+
+		email := strings.ToLower(strings.TrimSpace(req.Email))
+		otp := strings.TrimSpace(req.Otp)
+
+		if email == "" || len(otp) != 6 {
+			http.Error(w, "Email and 6-digit verification code are required", http.StatusBadRequest)
+			return
+		}
+
+		now := time.Now().UnixMilli()
+
+		var storedHash, storedSalt string
+		var attempts int
+		var expiresAt int64
+		err := db.QueryRow(`SELECT otp_hash, salt, attempts, expires_at FROM email_otps WHERE email = ?;`, email).Scan(&storedHash, &storedSalt, &attempts, &expiresAt)
+		if err == sql.ErrNoRows {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  "error",
+				"message": "No active verification code found for this email. Please request a code first.",
+			})
+			return
+		} else if err != nil {
+			log.Printf("Query email_otps error: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+
+		if now > expiresAt {
+			db.Exec(`DELETE FROM email_otps WHERE email = ?;`, email)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  "error",
+				"message": "Verification code has expired. Please request a new code.",
+			})
+			return
+		}
+
+		if attempts >= 5 {
+			db.Exec(`DELETE FROM email_otps WHERE email = ?;`, email)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusTooManyRequests)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  "error",
+				"message": "Too many invalid attempts. Please request a fresh verification code.",
+			})
+			return
+		}
+
+		candidateHash := hashPassword(storedSalt, otp)
+		if subtle.ConstantTimeCompare([]byte(candidateHash), []byte(storedHash)) != 1 {
+			db.Exec(`UPDATE email_otps SET attempts = attempts + 1 WHERE email = ?;`, email)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  "error",
+				"message": "Incorrect verification code. Please check your inbox and try again.",
+			})
+			return
+		}
+
+		// OTP verified! Clean up OTP record
+		db.Exec(`DELETE FROM email_otps WHERE email = ?;`, email)
+
+		// Generate cryptographically secure session token
+		token := generateSecureToken()
+		db.Exec(`INSERT INTO user_tokens (user_id, token, auth_provider, created_at)
+		         VALUES (?, ?, 'email_otp', ?)
+		         ON CONFLICT(user_id) DO UPDATE SET token = excluded.token, created_at = excluded.created_at;`, email, token, now)
+
+		db.Exec(`INSERT INTO user_credentials (user_id, salt, password_hash, created_at, last_login)
+		         VALUES (?, 'email_verified', 'email_verified', ?, ?)
+		         ON CONFLICT(user_id) DO UPDATE SET last_login = excluded.last_login;`, email, now, now)
+
+		var displayName string
+		db.QueryRow(`SELECT display_name FROM profiles WHERE user_id = ?;`, email).Scan(&displayName)
+		if displayName == "" {
+			parts := strings.Split(email, "@")
+			displayName = parts[0]
+		}
+
+		log.Printf("🎉 User successfully verified via Email OTP: %s", email)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":      "authenticated",
+			"userId":      email,
+			"displayName": displayName,
+			"token":       token,
+			"message":     "Email verified successfully. Welcome to Virgo Messenger!",
 		})
 	}
 }
@@ -835,11 +1272,26 @@ func initDatabase() (*sql.DB, error) {
 		avatar_url TEXT,
 		updated_at INTEGER
 	);
+	CREATE TABLE IF NOT EXISTS user_credentials (
+		user_id TEXT PRIMARY KEY,
+		salt TEXT NOT NULL,
+		password_hash TEXT NOT NULL,
+		created_at INTEGER NOT NULL,
+		last_login INTEGER NOT NULL
+	);
 	CREATE TABLE IF NOT EXISTS user_tokens (
 		user_id TEXT PRIMARY KEY,
 		token TEXT,
 		auth_provider TEXT,
 		created_at INTEGER
+	);
+	CREATE TABLE IF NOT EXISTS email_otps (
+		email TEXT PRIMARY KEY,
+		otp_hash TEXT NOT NULL,
+		salt TEXT NOT NULL,
+		attempts INTEGER DEFAULT 0,
+		expires_at INTEGER NOT NULL,
+		created_at INTEGER NOT NULL
 	);`
 	if _, err := db.Exec(schema); err != nil {
 		return nil, err
@@ -1000,6 +1452,10 @@ func main() {
 	hub := newHub(db)
 	go hub.run()
 
+	http.HandleFunc("/api/auth/send-otp", handleAuthSendOTP(db))
+	http.HandleFunc("/api/auth/verify-otp", handleAuthVerifyOTP(db))
+	http.HandleFunc("/api/auth/login", handleAuthRegisterOrLogin(db))
+	http.HandleFunc("/api/auth/check", handleAuthCheckUser(db))
 	http.HandleFunc("/auth/google", handleGoogleAuth(db))
 	http.HandleFunc("/upload", handleUpload)
 	http.HandleFunc("/api/profile", handleProfile(db, hub))
@@ -1094,15 +1550,28 @@ func main() {
 
 		token := strings.TrimSpace(r.URL.Query().Get("token"))
 
-		var expectedToken string
-		err := db.QueryRow(`SELECT token FROM user_tokens WHERE user_id = ?;`, userId).Scan(&expectedToken)
-		if err == nil && expectedToken != "" {
-			if token == "" || token != expectedToken {
-				log.Printf("❌ WebSocket rejected: unauthorized attempt for verified account %s", userId)
-				http.Error(w, "Unauthorized: verified token required", http.StatusUnauthorized)
+		var count int
+		db.QueryRow(`SELECT COUNT(1) FROM user_credentials WHERE user_id = ?;`, userId).Scan(&count)
+		if count > 0 {
+			var expectedToken string
+			err := db.QueryRow(`SELECT token FROM user_tokens WHERE user_id = ?;`, userId).Scan(&expectedToken)
+			if err != nil || expectedToken == "" || token == "" || token != expectedToken {
+				log.Printf("❌ WebSocket rejected: unauthorized attempt for PIN-protected account %s", userId)
+				http.Error(w, "Unauthorized: valid session token required for this protected account", http.StatusUnauthorized)
 				return
 			}
-			log.Printf("🔒 WebSocket verified token accepted for: %s", userId)
+			log.Printf("🔒 WebSocket verified token accepted for PIN-protected account: %s", userId)
+		} else {
+			var expectedToken string
+			err := db.QueryRow(`SELECT token FROM user_tokens WHERE user_id = ?;`, userId).Scan(&expectedToken)
+			if err == nil && expectedToken != "" {
+				if token == "" || token != expectedToken {
+					log.Printf("❌ WebSocket rejected: unauthorized attempt for verified account %s", userId)
+					http.Error(w, "Unauthorized: verified token required", http.StatusUnauthorized)
+					return
+				}
+				log.Printf("🔒 WebSocket verified token accepted for: %s", userId)
+			}
 		}
 
 		conn, err := upgrader.Upgrade(w, r, nil)
