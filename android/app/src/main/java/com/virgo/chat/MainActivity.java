@@ -77,6 +77,9 @@ public class MainActivity extends BridgeActivity {
         isAppInForeground = true;
         VirgoForegroundService.isActivityInForeground = true;
         NotificationHelper.cancelCallNotification(this);
+        if (currentOpenChat != null && !currentOpenChat.trim().isEmpty()) {
+            NotificationHelper.cancelNotificationsForSender(this, currentOpenChat);
+        }
         setupWebViewAndBridge();
         requestAppPermissions();
         startVirgoBackgroundService();
@@ -382,6 +385,28 @@ public class MainActivity extends BridgeActivity {
                         public void setActiveChat(String peerId) {
                             currentOpenChat = peerId != null ? peerId.trim().toLowerCase() : "";
                             Log.d(TAG, "Current active chat updated: " + currentOpenChat);
+                            if (!currentOpenChat.isEmpty()) {
+                                NotificationHelper.cancelNotificationsForSender(MainActivity.this, currentOpenChat);
+                            }
+                        }
+
+                        @JavascriptInterface
+                        public void clearNotificationsForContact(String peerId) {
+                            if (peerId != null && !peerId.trim().isEmpty()) {
+                                NotificationHelper.cancelNotificationsForSender(MainActivity.this, peerId.trim());
+                            }
+                        }
+
+                        @JavascriptInterface
+                        public void clearNotification(String msgId) {
+                            if (msgId != null && !msgId.trim().isEmpty()) {
+                                NotificationHelper.cancelNotificationById(MainActivity.this, msgId.trim());
+                            }
+                        }
+
+                        @JavascriptInterface
+                        public void clearAllNotifications() {
+                            NotificationHelper.cancelAllMessageNotifications(MainActivity.this);
                         }
 
                         @JavascriptInterface

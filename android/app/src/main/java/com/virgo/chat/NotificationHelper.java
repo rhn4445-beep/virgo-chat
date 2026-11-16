@@ -5,7 +5,11 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.media.AudioAttributes;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
@@ -13,11 +17,15 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.service.notification.StatusBarNotification;
 import android.util.Log;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class NotificationHelper {
     private static final String TAG = "VirgoNotifHelper";
@@ -35,6 +43,49 @@ public class NotificationHelper {
             }
         }
     );
+
+    // Active notification IDs per sender key for instant dismissal upon read
+    private static final Map<String, Set<Integer>> activeSenderNotifications = new ConcurrentHashMap<>();
+
+    public static String normalizeSenderKey(String raw) {
+        if (raw == null) return "";
+        String s = raw.trim().toLowerCase();
+        if (s.contains("@")) return s;
+        String digits = s.replaceAll("[^0-9]", "");
+        if (digits.length() >= 10) {
+            if (digits.length() == 12 && digits.startsWith("91")) return digits.substring(2);
+            if (digits.length() == 11 && digits.startsWith("0")) return digits.substring(1);
+            if (digits.length() == 10) return digits;
+        }
+        return s;
+    }
+
+    public static Bitmap getBitmapFromDrawable(Context context, int drawableId) {
+        if (context == null) return null;
+        try {
+            Drawable drawable = ContextCompat.getDrawable(context, drawableId);
+            if (drawable == null) {
+                return null;
+            }
+            if (drawable instanceof BitmapDrawable) {
+                return ((BitmapDrawable) drawable).getBitmap();
+            }
+            int width = drawable.getIntrinsicWidth() > 0 ? drawable.getIntrinsicWidth() : 192;
+            int height = drawable.getIntrinsicHeight() > 0 ? drawable.getIntrinsicHeight() : 192;
+            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+            drawable.draw(canvas);
+            return bitmap;
+        } catch (Throwable t) {
+            Log.e(TAG, "Error converting drawable to bitmap: " + t.getMessage());
+            try {
+                return BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_virgo_logo);
+            } catch (Throwable ignored) {
+                return null;
+            }
+        }
+    }
 
     public static synchronized boolean shouldNotifyMessage(String msgId) {
         if (msgId == null || msgId.trim().isEmpty()) {
@@ -120,6 +171,18 @@ public class NotificationHelper {
 
             Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 
+            // Determine deterministic ID per sender
+            String normSender = normalizeSenderKey(sender);
+            int senderNotifId = Math.abs(normSender.hashCode() % 100000000);
+            int notifId = (msgId != null && !msgId.trim().isEmpty())
+                ? Math.abs(msgId.hashCode() % 100000000)
+                : senderNotifId;
+
+            // Track IDs for this sender so they can be dismissed when the chat is opened
+            Set<Integer> idSet = activeSenderNotifications.computeIfAbsent(normSender, k -> Collections.newSetFromMap(new ConcurrentHashMap<>()));
+            idSet.add(notifId);
+            idSet.add(senderNotifId);
+
             NotificationCompat.Builder builder = new NotificationCompat.Builder(context, MSG_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_virgo)
                 .setContentTitle(sender)
@@ -134,22 +197,102 @@ public class NotificationHelper {
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent);
 
-            try {
-                builder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher));
-            } catch (Throwable ignored) {}
-
-            // Deterministic notification ID so updates or race conditions update in-place instead of stacking duplicates
-            int notifId = (msgId != null && !msgId.trim().isEmpty())
-                ? Math.abs(msgId.hashCode() % 100000000)
-                : Math.abs(sender.hashCode() % 100000000);
+            // Display official Virgo celestial lotus logo
+            Bitmap appLogo = getBitmapFromDrawable(context, R.mipmap.ic_launcher);
+            if (appLogo == null) {
+                appLogo = getBitmapFromDrawable(context, R.drawable.ic_virgo_logo);
+            }
+            if (appLogo != null) {
+                builder.setLargeIcon(appLogo);
+            }
 
             NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (notificationManager != null) {
                 notificationManager.notify(notifId, builder.build());
-                Log.d(TAG, "✅ Posted single notification [id=" + notifId + ", msgId=" + msgId + ", from=" + sender + "]");
+                Log.d(TAG, "✅ Posted notification [id=" + notifId + ", from=" + sender + "] with app logo");
             }
         } catch (Throwable t) {
             Log.e(TAG, "Error posting notification: " + t.getMessage(), t);
+        }
+    }
+
+    public static void cancelNotificationsForSender(Context context, String sender) {
+        if (context == null || sender == null) return;
+        try {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+
+            String norm = normalizeSenderKey(sender);
+            String raw = sender.trim().toLowerCase();
+
+            // 1. Cancel deterministic sender IDs
+            nm.cancel(Math.abs(norm.hashCode() % 100000000));
+            nm.cancel(Math.abs(raw.hashCode() % 100000000));
+
+            // 2. Cancel all tracked message IDs for this sender
+            Set<Integer> ids = activeSenderNotifications.remove(norm);
+            if (ids != null) {
+                for (Integer id : ids) {
+                    if (id != null) nm.cancel(id);
+                }
+            }
+            Set<Integer> rawIds = activeSenderNotifications.remove(raw);
+            if (rawIds != null) {
+                for (Integer id : rawIds) {
+                    if (id != null) nm.cancel(id);
+                }
+            }
+            Log.d(TAG, "🗑️ Dismissed all notifications in status bar for: " + sender);
+        } catch (Throwable t) {
+            Log.e(TAG, "Error cancelling notifications for sender: " + t.getMessage(), t);
+        }
+    }
+
+    public static void cancelNotificationById(Context context, String msgId) {
+        if (context == null || msgId == null || msgId.trim().isEmpty()) return;
+        try {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                int id = Math.abs(msgId.hashCode() % 100000000);
+                nm.cancel(id);
+                Log.d(TAG, "🗑️ Dismissed notification by ID: " + id);
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Error cancelling notification by ID: " + t.getMessage(), t);
+        }
+    }
+
+    public static void cancelAllMessageNotifications(Context context) {
+        if (context == null) return;
+        try {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+
+            // Cancel all tracked IDs
+            for (Set<Integer> ids : activeSenderNotifications.values()) {
+                if (ids != null) {
+                    for (Integer id : ids) {
+                        if (id != null) nm.cancel(id);
+                    }
+                }
+            }
+            activeSenderNotifications.clear();
+
+            // On Android 6+ (API 23+), sweep active notifications and clear any non-service notifications
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                StatusBarNotification[] active = nm.getActiveNotifications();
+                if (active != null) {
+                    for (StatusBarNotification sbn : active) {
+                        // Do NOT cancel the persistent background service notification (ID 2001)
+                        if (sbn.getId() != 2001) {
+                            nm.cancel(sbn.getId());
+                        }
+                    }
+                }
+            }
+            Log.d(TAG, "🗑️ Cancelled all message notifications in status bar");
+        } catch (Throwable t) {
+            Log.e(TAG, "Error cancelling all notifications: " + t.getMessage(), t);
         }
     }
 
@@ -249,9 +392,13 @@ public class NotificationHelper {
                 .setFullScreenIntent(pendingIntent, true)
                 .setContentIntent(pendingIntent);
 
-            try {
-                builder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher));
-            } catch (Throwable ignored) {}
+            Bitmap appLogo = getBitmapFromDrawable(context, R.mipmap.ic_launcher);
+            if (appLogo == null) {
+                appLogo = getBitmapFromDrawable(context, R.drawable.ic_virgo_logo);
+            }
+            if (appLogo != null) {
+                builder.setLargeIcon(appLogo);
+            }
 
             NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (notificationManager != null) {

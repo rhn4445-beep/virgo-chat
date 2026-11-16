@@ -125,9 +125,18 @@ public class VirgoForegroundService extends Service {
                 .setContentTitle("Virgo Messenger")
                 .setContentText("Connected & listening for messages")
                 .setSmallIcon(R.drawable.ic_stat_virgo)
+                .setColor(0xFFF5C542)
                 .setContentIntent(pendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setOngoing(true);
+
+            android.graphics.Bitmap logo = NotificationHelper.getBitmapFromDrawable(this, R.mipmap.ic_launcher);
+            if (logo == null) {
+                logo = NotificationHelper.getBitmapFromDrawable(this, R.drawable.ic_virgo_logo);
+            }
+            if (logo != null) {
+                builder.setLargeIcon(logo);
+            }
 
             Notification notification = builder.build();
 

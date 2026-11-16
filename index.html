@@ -3843,7 +3843,7 @@
     const isLocalDev = !isCapacitor && window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (window.location.port !== "");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = localStorage.getItem("virgo_active_client_version") || "v2.9.0";
+    let activeClientVersion = localStorage.getItem("virgo_active_client_version") || "v2.9.1";
     let updateBannerDismissed = false;
     let updateModalDismissed = false;
     let pendingNewVersion = "";
@@ -3851,6 +3851,9 @@
     // Mobile background lifecycle hooks called from Android MainActivity
     window.onVirgoResume = function() {
       console.log("Virgo resumed from background");
+      if (activeChatId && window.AndroidNative && typeof window.AndroidNative.clearNotificationsForContact === "function") {
+        try { window.AndroidNative.clearNotificationsForContact(activeChatId); } catch(e) {}
+      }
       if (myId) {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
           connectWebSocket();
@@ -3927,7 +3930,7 @@
       if (btn) btn.style.display = "none";
       if (prog) prog.style.display = "block";
 
-      const targetVersion = pendingNewVersion || "v2.9.0";
+      const targetVersion = pendingNewVersion || "v2.9.1";
       localStorage.setItem("virgo_active_client_version", targetVersion);
       activeClientVersion = targetVersion;
 
@@ -6546,8 +6549,13 @@
         if (normTarget) unreadCounts[normTarget] = 0;
         refreshSidebarContacts();
 
-        if (window.AndroidNative && typeof window.AndroidNative.setActiveChat === "function") {
-          window.AndroidNative.setActiveChat(activeChatId);
+        if (window.AndroidNative) {
+          if (typeof window.AndroidNative.setActiveChat === "function") {
+            window.AndroidNative.setActiveChat(activeChatId);
+          }
+          if (typeof window.AndroidNative.clearNotificationsForContact === "function") {
+            window.AndroidNative.clearNotificationsForContact(activeChatId);
+          }
         }
 
         document.body.classList.add("in-chat");
@@ -7836,8 +7844,9 @@
 
       if (isVisibleInActiveChat) {
         displayMessage(text, "received", safeMsgId, null, env.timestamp);
-        if (window.AndroidNative && typeof window.AndroidNative.vibrate === "function") {
-          window.AndroidNative.vibrate(150);
+        if (window.AndroidNative) {
+          if (typeof window.AndroidNative.vibrate === "function") window.AndroidNative.vibrate(150);
+          if (typeof window.AndroidNative.clearNotificationsForContact === "function") window.AndroidNative.clearNotificationsForContact(senderId);
         }
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
@@ -7940,8 +7949,9 @@
 
       if (isVisibleInActiveChat) {
         displayMessage(displayUrl, "received", safeMsgId, mediaType, env.timestamp, null, fileName, fileSize);
-        if (window.AndroidNative && typeof window.AndroidNative.vibrate === "function") {
-          window.AndroidNative.vibrate(150);
+        if (window.AndroidNative) {
+          if (typeof window.AndroidNative.vibrate === "function") window.AndroidNative.vibrate(150);
+          if (typeof window.AndroidNative.clearNotificationsForContact === "function") window.AndroidNative.clearNotificationsForContact(senderId);
         }
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
