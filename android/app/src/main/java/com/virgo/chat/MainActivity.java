@@ -51,6 +51,7 @@ public class MainActivity extends BridgeActivity {
     private ValueCallback<Uri[]> mFilePathCallback;
     private Uri mCameraPhotoUri;
     private boolean isWebChromeClientAttached = false;
+    private Ringtone mCurrentRingtone = null;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -97,6 +98,17 @@ public class MainActivity extends BridgeActivity {
                 this.bridge.getWebView().resumeTimers();
                 this.bridge.getWebView().evaluateJavascript("if (window.onVirgoPause) window.onVirgoPause();", null);
             }
+        } catch (Exception ignored) {}
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        try {
+            if (mCurrentRingtone != null && mCurrentRingtone.isPlaying()) {
+                mCurrentRingtone.stop();
+            }
+            mCurrentRingtone = null;
         } catch (Exception ignored) {}
     }
 
@@ -415,6 +427,40 @@ public class MainActivity extends BridgeActivity {
                                 Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), sound);
                                 if (r != null) r.play();
                             } catch (Exception ignored) {}
+                        }
+
+                        @JavascriptInterface
+                        public void startRingtone() {
+                            runOnUiThread(() -> {
+                                try {
+                                    stopRingtone();
+                                    Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+                                    if (sound == null) {
+                                        sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+                                    }
+                                    mCurrentRingtone = RingtoneManager.getRingtone(getApplicationContext(), sound);
+                                    if (mCurrentRingtone != null) {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                            mCurrentRingtone.setLooping(true);
+                                        }
+                                        mCurrentRingtone.play();
+                                    }
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Error starting ringtone: " + e.getMessage());
+                                }
+                            });
+                        }
+
+                        @JavascriptInterface
+                        public void stopRingtone() {
+                            runOnUiThread(() -> {
+                                try {
+                                    if (mCurrentRingtone != null && mCurrentRingtone.isPlaying()) {
+                                        mCurrentRingtone.stop();
+                                    }
+                                    mCurrentRingtone = null;
+                                } catch (Exception ignored) {}
+                            });
                         }
 
                         @JavascriptInterface

@@ -1808,6 +1808,146 @@
       background: rgba(239, 68, 68, 0.25);
       border-color: #ef4444;
     }
+
+    /* WEBRTC & CALLING SUITE STYLES */
+    .call-btn-circle {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .call-btn-circle:hover { transform: scale(1.08); }
+    .call-btn-accept {
+      background: #10b981;
+      color: #fff;
+      box-shadow: 0 0 24px rgba(16, 185, 129, 0.55);
+    }
+    .call-btn-decline, .call-btn-hangup {
+      background: #ef4444;
+      color: #fff;
+      box-shadow: 0 0 24px rgba(239, 68, 68, 0.55);
+    }
+    .call-btn-circle svg {
+      width: 26px;
+      height: 26px;
+      fill: currentColor;
+    }
+    .call-ctrl-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-starlight);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .call-ctrl-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      transform: scale(1.05);
+    }
+    .call-ctrl-btn.active-off {
+      background: rgba(239, 68, 68, 0.22);
+      border-color: rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+    }
+    .call-ctrl-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+    .calling-pulse-ring {
+      position: absolute;
+      top: -10px; left: -10px; right: -10px; bottom: -10px;
+      border-radius: 50%;
+      border: 2px solid var(--virgo-gold);
+      animation: callPulse 1.8s infinite;
+      opacity: 0.8;
+      pointer-events: none;
+    }
+    @keyframes callPulse {
+      0% { transform: scale(0.92); opacity: 0.95; }
+      50% { transform: scale(1.2); opacity: 0.35; }
+      100% { transform: scale(1.35); opacity: 0; }
+    }
+    .voice-wave-ring {
+      position: absolute;
+      top: -12px; left: -12px; right: -12px; bottom: -12px;
+      border-radius: 50%;
+      border: 2px solid var(--virgo-gold);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .voice-wave-ring.ring-1 { animation: voiceWave 2.2s infinite ease-out; }
+    .voice-wave-ring.ring-2 { animation: voiceWave 2.2s infinite ease-out 0.9s; }
+    @keyframes voiceWave {
+      0% { transform: scale(0.95); opacity: 0.85; }
+      100% { transform: scale(1.65); opacity: 0; }
+    }
+    .call-log-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-starlight);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .call-log-card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(245, 197, 66, 0.35);
+    }
+    .call-log-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border-starlight);
+      object-fit: cover;
+    }
+    .call-direction-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+    .call-direction-badge.incoming { color: #38bdf8; }
+    .call-direction-badge.outgoing { color: #34d399; }
+    .call-direction-badge.missed { color: #f87171; }
+    .call-action-chip {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(245, 197, 66, 0.1);
+      border: 1px solid rgba(245, 197, 66, 0.25);
+      color: var(--virgo-gold-bright);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .call-action-chip:hover {
+      background: var(--virgo-gold);
+      color: #06090e;
+      transform: scale(1.08);
+      box-shadow: 0 0 12px rgba(245, 197, 66, 0.4);
+    }
+    .call-action-chip svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
   </style>
 </head>
 <body>
@@ -1943,12 +2083,20 @@
     </div>
 
     <!-- CALLS TAB VIEW -->
-    <div id="calls-tab-view" style="display:none;flex:1;overflow-y:auto;padding:24px;text-align:center;">
-      <div style="width:68px;height:68px;border-radius:50%;background:var(--bg-card);border:1px solid var(--border-starlight);display:flex;align-items:center;justify-content:center;margin:24px auto 16px;">
-        <svg style="width:30px;height:30px;fill:var(--virgo-gold-bright);" viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
+    <div id="calls-tab-view" style="display:none;flex:1;overflow-y:auto;padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:4px 4px;">
+        <div>
+          <h2 style="font-size:19px;font-weight:700;color:#fff;margin:0 0 2px;">Calls</h2>
+          <div style="font-size:11.5px;color:var(--text-muted);">Encrypted WebRTC P2P Voice &amp; Video</div>
+        </div>
+        <button onclick="openNewCallModal()" style="display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--virgo-gold-bright),var(--virgo-gold));color:#06090e;border:none;border-radius:20px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(245,197,66,0.25);">
+          <span>+</span> New Call
+        </button>
       </div>
-      <div style="font-size:17px;font-weight:700;color:#fff;margin-bottom:6px;">Encrypted Voice Calls</div>
-      <div style="font-size:13px;color:var(--text-muted);max-width:280px;margin:0 auto 18px;line-height:1.5;">Start a secure, peer-to-peer encrypted voice call directly from any contact's conversation screen.</div>
+
+      <div id="call-logs-container" style="display:flex;flex-direction:column;gap:8px;">
+        <!-- Dynamic call logs rendered here -->
+      </div>
     </div>
 
     <!-- FLOATING ACTION BUTTON -->
@@ -2157,6 +2305,9 @@
         <div class="chat-header-tools">
           <button class="action-icon-btn" onclick="startVoiceCall()" title="Voice Call">
             <svg viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
+          </button>
+          <button class="action-icon-btn" onclick="startVideoCall()" title="Video Call">
+            <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
           </button>
           <button class="action-icon-btn" onclick="toggleChatDropdown()" title="Options">
             <svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
@@ -2582,6 +2733,111 @@
           <span>Clear Media Cache (Frees Disk Space)</span>
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- NEW CALL DIALOG -->
+  <div class="virgo-modal" id="new-call-dialog" style="display:none;align-items:center;justify-content:center;">
+    <div class="virgo-dialog" style="max-width:380px;width:92%;padding:22px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:#fff;">Start New Call</h3>
+        <button onclick="closeNewCallModal()" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;">✕</button>
+      </div>
+      <p style="font-size:12.5px;color:var(--text-muted);margin:0 0 14px;">Enter the user ID or email of the person you want to call:</p>
+      <input type="text" id="inp-new-call-target" placeholder="e.g. user@gmail.com or username" style="width:100%;box-sizing:border-box;background:var(--bg-card);border:1px solid var(--border-starlight);color:#fff;padding:10px 14px;border-radius:12px;font-size:14px;outline:none;margin-bottom:16px;">
+      
+      <div style="display:flex;gap:10px;">
+        <button onclick="confirmNewCall('audio')" style="flex:1;background:var(--bg-card);border:1px solid var(--virgo-gold);color:var(--virgo-gold-bright);border-radius:12px;padding:12px;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;">
+          <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
+          Voice Call
+        </button>
+        <button onclick="confirmNewCall('video')" style="flex:1;background:linear-gradient(135deg,var(--virgo-gold-bright),var(--virgo-gold));color:#06090e;border:none;border-radius:12px;padding:12px;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;">
+          <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+          Video Call
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INCOMING CALL MODAL -->
+  <div class="virgo-modal" id="incoming-call-modal" style="display:none;align-items:center;justify-content:center;z-index:99999;">
+    <div class="virgo-dialog" style="max-width:340px;width:90%;text-align:center;padding:28px 24px;">
+      <div style="position:relative;width:96px;height:96px;margin:0 auto 16px;">
+        <div class="calling-pulse-ring"></div>
+        <img id="incoming-caller-avatar" src="icon.png?v=celestial" style="width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid var(--virgo-gold);position:relative;z-index:2;">
+      </div>
+      <div id="incoming-caller-name" style="font-size:19px;font-weight:700;color:#fff;margin-bottom:4px;">Incoming Caller</div>
+      <div id="incoming-caller-sub" style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">user@example.com</div>
+      <div id="incoming-call-type-badge" style="display:inline-flex;align-items:center;gap:6px;background:rgba(245,197,66,0.12);border:1px solid rgba(245,197,66,0.3);color:var(--virgo-gold-bright);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:24px;">
+        <span>📞</span> Incoming Voice Call...
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:36px;">
+        <button onclick="declineIncomingCall()" class="call-btn-circle call-btn-decline" title="Decline">
+          <svg viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
+        </button>
+        <button onclick="acceptIncomingCall()" class="call-btn-circle call-btn-accept" title="Answer">
+          <svg viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVE CALL MODAL (FULLSCREEN / OVERLAY) -->
+  <div id="active-call-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(6,9,14,0.96);backdrop-filter:blur(24px);z-index:99998;flex-direction:column;align-items:center;justify-content:space-between;padding:24px 16px;">
+    <!-- CALL HEADER -->
+    <div style="width:100%;max-width:560px;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--border-starlight);border-radius:18px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img id="active-call-peer-avatar" src="icon.png?v=celestial" style="width:38px;height:38px;border-radius:50%;border:1px solid var(--virgo-gold);object-fit:cover;">
+        <div>
+          <div id="active-call-peer-name" style="font-weight:700;color:#fff;font-size:14.5px;">Peer Name</div>
+          <div id="active-call-timer" style="font-size:11.5px;color:var(--virgo-gold-bright);font-weight:600;">Connecting...</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);background:rgba(0,0,0,0.3);padding:4px 10px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);">
+        <span>🔒</span> E2EE WebRTC
+      </div>
+    </div>
+
+    <!-- CALL BODY: VOICE WAVEFORM OR VIDEO VIEWS -->
+    <div id="call-body-container" style="flex:1;width:100%;max-width:560px;display:flex;align-items:center;justify-content:center;position:relative;margin:16px 0;">
+      <!-- Voice Call Center Avatar & Ripple -->
+      <div id="voice-call-avatar-wrap" style="text-align:center;">
+        <div style="position:relative;width:130px;height:130px;margin:0 auto 20px;">
+          <div class="voice-wave-ring ring-1"></div>
+          <div class="voice-wave-ring ring-2"></div>
+          <img id="voice-call-avatar" src="icon.png?v=celestial" style="width:100%;height:100%;border-radius:50%;object-fit:cover;border:3px solid var(--virgo-gold);position:relative;z-index:2;box-shadow:0 0 32px rgba(245,197,66,0.35);">
+        </div>
+        <div id="voice-call-status-label" style="color:var(--text-muted);font-size:13px;letter-spacing:0.5px;">Encrypted Voice Link Active</div>
+      </div>
+
+      <!-- Video Call Container (Remote Video + Floating PiP Local Video) -->
+      <div id="video-call-container" style="display:none;width:100%;height:100%;position:relative;border-radius:20px;overflow:hidden;background:#000;border:1px solid var(--border-starlight);">
+        <video id="webrtc-remote-video" autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>
+        <div style="position:absolute;bottom:16px;right:16px;width:110px;height:150px;border-radius:14px;overflow:hidden;border:2px solid var(--virgo-gold);box-shadow:0 8px 24px rgba(0,0,0,0.6);background:#121824;">
+          <video id="webrtc-local-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;"></video>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUDIO ELEMENT FOR REMOTE AUDIO -->
+    <audio id="webrtc-remote-audio" autoplay playsinline style="display:none;"></audio>
+
+    <!-- CALL CONTROL TOOLBAR -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:18px;padding:12px 24px;background:rgba(255,255,255,0.05);border:1px solid var(--border-starlight);border-radius:32px;backdrop-filter:blur(16px);">
+      <button id="call-btn-mute-mic" onclick="toggleCallMuteAudio()" class="call-ctrl-btn" title="Mute Microphone">
+        <svg id="icon-mic-on" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+        <svg id="icon-mic-off" style="display:none;" viewBox="0 0 24 24"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/></svg>
+      </button>
+      <button id="call-btn-toggle-video" onclick="toggleCallVideo()" class="call-ctrl-btn" title="Toggle Camera">
+        <svg id="icon-video-on" viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+        <svg id="icon-video-off" style="display:none;" viewBox="0 0 24 24"><path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.55-.18L19.73 21 21 19.73 3.27 2z"/></svg>
+      </button>
+      <button id="call-btn-flip-cam" onclick="flipCallCamera()" class="call-ctrl-btn" title="Flip Camera" style="display:none;">
+        <svg viewBox="0 0 24 24"><path d="M20 16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4M4 8V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><circle cx="12" cy="12" r="3"/><path d="M8 12h.01"/><path d="M16 12h.01"/></svg>
+      </button>
+      <button onclick="endActiveCall('user_hung_up')" class="call-btn-circle call-btn-hangup" title="End Call">
+        <svg viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
+      </button>
     </div>
   </div>
 
@@ -3586,7 +3842,7 @@
           fab.setAttribute("title", "Camera");
           fab.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>`;
         } else if (tab === "calls") {
-          fab.setAttribute("onclick", "openNewChatModal()");
+          fab.setAttribute("onclick", "openNewCallModal()");
           fab.setAttribute("title", "New Call");
           fab.innerHTML = `<svg viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>`;
         }
@@ -3594,6 +3850,9 @@
 
       document.getElementById("updates-tab-view").style.display = tab === "updates" ? "block" : "none";
       document.getElementById("calls-tab-view").style.display = tab === "calls" ? "block" : "none";
+      if (tab === "calls") {
+        renderCallLogs();
+      }
     }
 
     function applyChatFilter(type, el) {
@@ -4917,8 +5176,849 @@
       closeChatMobile();
     }
 
+    // ==========================================
+    // VIRGO WEBRTC ENCRYPTED CALLING ENGINE
+    // ==========================================
+    let currentCall = null;
+    let incomingCallData = null;
+    let callAudioCtx = null;
+    let ringInterval = null;
+    let callTimeoutTimer = null;
+
+    const RTC_CONFIG = {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun3.l.google.com:19302" },
+        { urls: "stun:stun4.l.google.com:19302" }
+      ]
+    };
+
+    function getCallAudioContext() {
+      if (!callAudioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) callAudioCtx = new AudioContextClass();
+      }
+      if (callAudioCtx && callAudioCtx.state === 'suspended') {
+        callAudioCtx.resume().catch(() => {});
+      }
+      return callAudioCtx;
+    }
+
+    function playTone(freq1, freq2, durationMs) {
+      try {
+        const ctx = getCallAudioContext();
+        if (!ctx) return;
+        const osc1 = ctx.createOscillator();
+        const osc2 = freq2 ? ctx.createOscillator() : null;
+        const gain = ctx.createGain();
+
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(freq1, ctx.currentTime);
+
+        if (osc2) {
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(freq2, ctx.currentTime);
+          osc2.connect(gain);
+        }
+
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (durationMs / 1000));
+
+        osc1.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc1.start();
+        if (osc2) osc2.start();
+
+        osc1.stop(ctx.currentTime + (durationMs / 1000));
+        if (osc2) osc2.stop(ctx.currentTime + (durationMs / 1000));
+      } catch(e) {}
+    }
+
+    function startIncomingRingtone() {
+      stopCallTones();
+      if (window.AndroidNative && typeof window.AndroidNative.startRingtone === "function") {
+        try { window.AndroidNative.startRingtone(); } catch(e) {}
+      }
+      const ringPattern = () => {
+        playTone(528, 660, 1200);
+      };
+      ringPattern();
+      ringInterval = setInterval(ringPattern, 3200);
+    }
+
+    function startRingbackTone() {
+      stopCallTones();
+      const ringbackPattern = () => {
+        playTone(440, 480, 1400);
+      };
+      ringbackPattern();
+      ringInterval = setInterval(ringbackPattern, 4000);
+    }
+
+    function stopCallTones() {
+      if (ringInterval) {
+        clearInterval(ringInterval);
+        ringInterval = null;
+      }
+      if (window.AndroidNative && typeof window.AndroidNative.stopRingtone === "function") {
+        try { window.AndroidNative.stopRingtone(); } catch(e) {}
+      }
+    }
+
+    function playCallEndTone() {
+      stopCallTones();
+      playTone(480, 320, 350);
+    }
+
+    // CALL LOGGING & HISTORY
+    function getCallLogs() {
+      try {
+        const raw = localStorage.getItem("virgo_call_logs");
+        return raw ? JSON.parse(raw) : [];
+      } catch(e) {
+        return [];
+      }
+    }
+
+    function saveCallLogs(logs) {
+      try {
+        localStorage.setItem("virgo_call_logs", JSON.stringify(logs.slice(0, 60)));
+      } catch(e) {}
+    }
+
+    async function logCallRecord(peerId, type, direction, durationSec) {
+      if (!peerId) return;
+      const logs = getCallLogs();
+      const profile = await fetchUserProfile(peerId);
+      const entry = {
+        id: "call-" + Date.now(),
+        peerId: peerId.toLowerCase().trim(),
+        peerName: profile.displayName || peerId,
+        peerAvatar: profile.avatarUrl || "icon.png?v=celestial",
+        type: type || "audio",
+        direction: direction || "outgoing",
+        duration: durationSec || 0,
+        timestamp: Date.now()
+      };
+      logs.unshift(entry);
+      saveCallLogs(logs);
+      renderCallLogs();
+    }
+
+    function renderCallLogs() {
+      const container = document.getElementById("call-logs-container");
+      if (!container) return;
+      const logs = getCallLogs();
+
+      if (logs.length === 0) {
+        container.innerHTML = `
+          <div style="background:var(--bg-card);border:1px solid var(--border-starlight);border-radius:18px;padding:36px 20px;text-align:center;margin-top:12px;">
+            <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,197,66,0.1);border:1px solid rgba(245,197,66,0.25);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+              <svg style="width:26px;height:26px;fill:var(--virgo-gold-bright);" viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
+            </div>
+            <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">No Recent Calls</div>
+            <div style="font-size:12.5px;color:var(--text-muted);max-width:280px;margin:0 auto 18px;line-height:1.5;">Make your first encrypted peer-to-peer voice or video call with pristine clarity.</div>
+            <button onclick="openNewCallModal()" style="background:linear-gradient(135deg,var(--virgo-gold-bright),var(--virgo-gold));color:#06090e;border:none;border-radius:12px;padding:10px 20px;font-weight:700;font-size:13px;cursor:pointer;">
+              Start a Call
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = "";
+      logs.forEach(log => {
+        const isVoice = log.type === "audio";
+        const isMissed = log.direction === "missed";
+        const isOut = log.direction === "outgoing";
+        const dirClass = isMissed ? "missed" : (isOut ? "outgoing" : "incoming");
+        const dirLabel = isMissed ? "Missed Call" : (isOut ? "Outgoing" : "Incoming");
+        const dirArrow = isMissed ? "↙" : (isOut ? "↗" : "↙");
+        const typeIcon = isVoice ? "📞" : "📹";
+
+        let durationStr = "";
+        if (log.duration > 0) {
+          const m = Math.floor(log.duration / 60);
+          const s = log.duration % 60;
+          durationStr = m > 0 ? `${m}m ${s}s` : `${s}s`;
+        } else {
+          durationStr = isMissed ? "Missed" : "0s";
+        }
+
+        const dateStr = new Date(log.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+        const card = document.createElement("div");
+        card.className = "call-log-card";
+        card.innerHTML = `
+          <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
+            <img class="call-log-avatar" src="${log.peerAvatar || 'icon.png?v=celestial'}" alt="${log.peerName}">
+            <div style="min-width:0;">
+              <div style="font-weight:700;color:#fff;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${log.peerName}</div>
+              <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+                <span class="call-direction-badge ${dirClass}">${dirArrow} ${dirLabel}</span>
+                <span style="font-size:11px;color:var(--text-muted);">•</span>
+                <span style="font-size:11.5px;color:var(--text-muted);">${typeIcon} ${durationStr}</span>
+              </div>
+              <div style="font-size:10.5px;color:rgba(255,255,255,0.4);margin-top:2px;">${dateStr}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button onclick="initiateCall('${log.peerId}', 'audio')" class="call-action-chip" title="Voice Call">
+              <svg viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
+            </button>
+            <button onclick="initiateCall('${log.peerId}', 'video')" class="call-action-chip" title="Video Call">
+              <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // NEW CALL MODAL HELPERS
+    function openNewCallModal() {
+      const m = document.getElementById("new-call-dialog");
+      if (m) {
+        m.style.display = "flex";
+        setTimeout(() => {
+          const inp = document.getElementById("inp-new-call-target");
+          if (inp) { inp.value = ""; inp.focus(); }
+        }, 100);
+      }
+    }
+
+    function closeNewCallModal() {
+      const m = document.getElementById("new-call-dialog");
+      if (m) m.style.display = "none";
+    }
+
+    function confirmNewCall(type) {
+      const inp = document.getElementById("inp-new-call-target");
+      if (!inp || !inp.value.trim()) return;
+      const clean = inp.value.trim().toLowerCase();
+      if (clean === myId) return alert("You cannot call yourself!");
+      closeNewCallModal();
+      initiateCall(clean, type);
+    }
+
+    // CALL INITIATION & WEBRTC CORE
     function startVoiceCall() {
-      alert(`Voice Link: Connecting to ${activeChatId}... (Audio streaming ready)`);
+      if (!activeChatId) return alert("Select a conversation to start a voice call!");
+      initiateCall(activeChatId, 'audio');
+    }
+
+    function startVideoCall() {
+      if (!activeChatId) return alert("Select a conversation to start a video call!");
+      initiateCall(activeChatId, 'video');
+    }
+
+    async function initiateCall(targetPeerId, callType = 'audio') {
+      if (!myId) return alert("Please log in first!");
+      if (!targetPeerId) return;
+      targetPeerId = targetPeerId.toLowerCase().trim();
+      if (targetPeerId === myId) return alert("You cannot call yourself!");
+
+      if (currentCall) {
+        return alert("A call is already in progress!");
+      }
+
+      const profile = await fetchUserProfile(targetPeerId);
+      const peerDisplayName = profile.displayName || targetPeerId;
+      const peerAvatarUrl = profile.avatarUrl || "icon.png?v=celestial";
+
+      // 1. Acquire local media stream
+      let stream = null;
+      try {
+        const constraints = {
+          audio: true,
+          video: callType === "video" ? { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } : false
+        };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (err) {
+        console.error("Failed getting local media stream:", err);
+        return alert("Microphone / Camera access is required to place a call: " + (err.message || err));
+      }
+
+      const callId = "call-" + Date.now() + "-" + Math.random().toString(36).substr(2, 6);
+
+      currentCall = {
+        callId,
+        peerId: targetPeerId,
+        peerName: peerDisplayName,
+        peerAvatar: peerAvatarUrl,
+        type: callType,
+        direction: "outgoing",
+        status: "ringing",
+        startTime: null,
+        timerInterval: null,
+        pc: null,
+        localStream: stream,
+        remoteStream: null,
+        pendingCandidates: []
+      };
+
+      // 2. Setup Active Call Overlay UI
+      setupActiveCallUI(currentCall);
+
+      // 3. Play outgoing ringback tone
+      startRingbackTone();
+
+      // 4. Send call request to peer via WebSocket
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          id: "req-" + Date.now(),
+          from: myId,
+          to: targetPeerId,
+          type: "call_request",
+          payload: {
+            callId,
+            callType,
+            callerName: myProfileName || myId,
+            callerAvatar: myProfileAvatar || "icon.png?v=celestial"
+          },
+          timestamp: Date.now()
+        }));
+      } else {
+        endActiveCall("offline", false);
+        return alert("WebSocket is not connected. Please check your connection.");
+      }
+
+      // 5. Outgoing ringing timeout (35 seconds)
+      if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
+      callTimeoutTimer = setTimeout(() => {
+        if (currentCall && currentCall.status === "ringing") {
+          endActiveCall("no_answer");
+          alert(`${peerDisplayName} is not answering.`);
+        }
+      }, 35000);
+    }
+
+    function createPeerConnection(peerId, callType) {
+      const pc = new RTCPeerConnection(RTC_CONFIG);
+
+      // Add local tracks to peer connection
+      if (currentCall && currentCall.localStream) {
+        currentCall.localStream.getTracks().forEach(track => {
+          pc.addTrack(track, currentCall.localStream);
+        });
+      }
+
+      // Handle remote incoming tracks
+      pc.ontrack = (event) => {
+        console.log("WebRTC remote track received:", event);
+        if (event.streams && event.streams[0]) {
+          currentCall.remoteStream = event.streams[0];
+          const remoteAudio = document.getElementById("webrtc-remote-audio");
+          const remoteVideo = document.getElementById("webrtc-remote-video");
+          if (remoteAudio) {
+            remoteAudio.srcObject = event.streams[0];
+            remoteAudio.play().catch(e => console.log("Remote audio play error:", e));
+          }
+          if (remoteVideo && currentCall.type === "video") {
+            remoteVideo.srcObject = event.streams[0];
+            remoteVideo.play().catch(e => console.log("Remote video play error:", e));
+          }
+        }
+      };
+
+      // Handle ICE candidates
+      pc.onicecandidate = (event) => {
+        if (event.candidate && ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            id: "ice-" + Date.now(),
+            from: myId,
+            to: peerId,
+            type: "webrtc_candidate",
+            payload: {
+              candidate: event.candidate,
+              callId: currentCall ? currentCall.callId : ""
+            },
+            timestamp: Date.now()
+          }));
+        }
+      };
+
+      // Monitor connection state
+      pc.onconnectionstatechange = () => {
+        console.log("WebRTC connection state:", pc.connectionState);
+        if (pc.connectionState === "connected") {
+          stopCallTones();
+          if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
+          if (currentCall) {
+            currentCall.status = "connected";
+            startCallTimer();
+            const statusLabel = document.getElementById("voice-call-status-label");
+            if (statusLabel) statusLabel.innerText = "Encrypted Connection Established";
+          }
+        } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+          endActiveCall("connection_lost");
+        }
+      };
+
+      return pc;
+    }
+
+    function setupActiveCallUI(call) {
+      const modal = document.getElementById("active-call-modal");
+      if (!modal) return;
+      modal.style.display = "flex";
+
+      document.getElementById("active-call-peer-avatar").src = call.peerAvatar;
+      document.getElementById("active-call-peer-name").innerText = call.peerName;
+      document.getElementById("active-call-timer").innerText = "Ringing...";
+
+      const isVideo = call.type === "video";
+      const voiceWrap = document.getElementById("voice-call-avatar-wrap");
+      const videoWrap = document.getElementById("video-call-container");
+      const flipBtn = document.getElementById("call-btn-flip-cam");
+
+      if (voiceWrap) voiceWrap.style.display = isVideo ? "none" : "block";
+      if (videoWrap) videoWrap.style.display = isVideo ? "block" : "none";
+      if (flipBtn) flipBtn.style.display = isVideo ? "flex" : "none";
+
+      if (document.getElementById("voice-call-avatar")) {
+        document.getElementById("voice-call-avatar").src = call.peerAvatar;
+      }
+      if (document.getElementById("voice-call-status-label")) {
+        document.getElementById("voice-call-status-label").innerText = isVideo ? "HD Video Link Connecting..." : "Encrypted Voice Link Connecting...";
+      }
+
+      // If video, attach local preview immediately
+      if (isVideo && call.localStream) {
+        const localVideo = document.getElementById("webrtc-local-video");
+        if (localVideo) {
+          localVideo.srcObject = call.localStream;
+          localVideo.play().catch(e => console.log("Local video play error:", e));
+        }
+      }
+
+      // Reset button toggle states
+      const micBtn = document.getElementById("call-btn-mute-mic");
+      const videoBtn = document.getElementById("call-btn-toggle-video");
+      if (micBtn) micBtn.classList.remove("active-off");
+      if (videoBtn) videoBtn.classList.remove("active-off");
+      document.getElementById("icon-mic-on").style.display = "block";
+      document.getElementById("icon-mic-off").style.display = "none";
+      document.getElementById("icon-video-on").style.display = "block";
+      document.getElementById("icon-video-off").style.display = "none";
+    }
+
+    // INCOMING CALL HANDLING
+    async function handleIncomingCallRequest(env) {
+      const payload = env.payload || {};
+      const callerId = env.from;
+      const callId = payload.callId;
+      const callType = payload.callType || "audio";
+
+      // If already on a call, reject automatically as busy
+      if (currentCall) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            id: "rej-" + Date.now(),
+            from: myId,
+            to: callerId,
+            type: "call_rejected",
+            payload: { callId, reason: "busy" },
+            timestamp: Date.now()
+          }));
+        }
+        return;
+      }
+
+      incomingCallData = {
+        callId,
+        callerId,
+        callType,
+        callerName: payload.callerName || callerId,
+        callerAvatar: payload.callerAvatar || "icon.png?v=celestial"
+      };
+
+      // Send ringing acknowledgement back to caller
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          id: "ring-" + Date.now(),
+          from: myId,
+          to: callerId,
+          type: "call_ringing",
+          payload: { callId },
+          timestamp: Date.now()
+        }));
+      }
+
+      // Show Incoming Call Modal
+      const modal = document.getElementById("incoming-call-modal");
+      if (modal) {
+        document.getElementById("incoming-caller-avatar").src = incomingCallData.callerAvatar;
+        document.getElementById("incoming-caller-name").innerText = incomingCallData.callerName;
+        document.getElementById("incoming-caller-sub").innerText = callerId;
+        const badge = document.getElementById("incoming-call-type-badge");
+        if (badge) {
+          badge.innerHTML = callType === "video" ? `<span>📹</span> Incoming Video Call...` : `<span>📞</span> Incoming Voice Call...`;
+        }
+        modal.style.display = "flex";
+      }
+
+      // Start ringing sounds and vibrations
+      startIncomingRingtone();
+      if (window.AndroidNative && typeof window.AndroidNative.vibrate === "function") {
+        window.AndroidNative.vibrate(800);
+      }
+
+      // Auto-cancel incoming call after 35s if unanswered
+      if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
+      callTimeoutTimer = setTimeout(() => {
+        if (incomingCallData && incomingCallData.callId === callId) {
+          declineIncomingCall("missed");
+        }
+      }, 35000);
+    }
+
+    async function acceptIncomingCall() {
+      if (!incomingCallData) return;
+      if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
+      stopCallTones();
+
+      const modal = document.getElementById("incoming-call-modal");
+      if (modal) modal.style.display = "none";
+
+      const { callId, callerId, callType, callerName, callerAvatar } = incomingCallData;
+
+      // 1. Acquire local media stream
+      let stream = null;
+      try {
+        const constraints = {
+          audio: true,
+          video: callType === "video" ? { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } : false
+        };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (err) {
+        console.error("Failed acquiring media for incoming call:", err);
+        declineIncomingCall("media_error");
+        return alert("Failed to access camera/microphone: " + (err.message || err));
+      }
+
+      currentCall = {
+        callId,
+        peerId: callerId,
+        peerName: callerName,
+        peerAvatar: callerAvatar,
+        type: callType,
+        direction: "incoming",
+        status: "connecting",
+        startTime: null,
+        timerInterval: null,
+        pc: null,
+        localStream: stream,
+        remoteStream: null,
+        pendingCandidates: []
+      };
+
+      // 2. Create peer connection on callee side
+      currentCall.pc = createPeerConnection(callerId, callType);
+
+      // 3. Setup Active Call Overlay
+      setupActiveCallUI(currentCall);
+      document.getElementById("active-call-timer").innerText = "Connecting...";
+
+      // 4. Send call accepted to caller
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          id: "acc-" + Date.now(),
+          from: myId,
+          to: callerId,
+          type: "call_accepted",
+          payload: { callId, callType },
+          timestamp: Date.now()
+        }));
+      }
+
+      incomingCallData = null;
+    }
+
+    function declineIncomingCall(reason = "declined") {
+      stopCallTones();
+      if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
+
+      const modal = document.getElementById("incoming-call-modal");
+      if (modal) modal.style.display = "none";
+
+      if (incomingCallData) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            id: "rej-" + Date.now(),
+            from: myId,
+            to: incomingCallData.callerId,
+            type: "call_rejected",
+            payload: { callId: incomingCallData.callId, reason },
+            timestamp: Date.now()
+          }));
+        }
+        logCallRecord(incomingCallData.callerId, incomingCallData.callType, "missed", 0);
+        incomingCallData = null;
+      }
+    }
+
+    function endActiveCall(reason = "user_ended", notifyPeer = true) {
+      stopCallTones();
+      if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
+
+      if (!currentCall) {
+        const modal = document.getElementById("active-call-modal");
+        if (modal) modal.style.display = "none";
+        return;
+      }
+
+      const durationSec = currentCall.startTime ? Math.floor((Date.now() - currentCall.startTime) / 1000) : 0;
+      const peerId = currentCall.peerId;
+      const callType = currentCall.type;
+      const direction = currentCall.direction;
+      const callId = currentCall.callId;
+
+      if (currentCall.timerInterval) {
+        clearInterval(currentCall.timerInterval);
+      }
+
+      // Stop local tracks
+      if (currentCall.localStream) {
+        currentCall.localStream.getTracks().forEach(t => t.stop());
+      }
+
+      // Close WebRTC peer connection
+      if (currentCall.pc) {
+        try { currentCall.pc.close(); } catch(e) {}
+        currentCall.pc = null;
+      }
+
+      // Reset audio / video elements
+      const remoteAudio = document.getElementById("webrtc-remote-audio");
+      const remoteVideo = document.getElementById("webrtc-remote-video");
+      const localVideo = document.getElementById("webrtc-local-video");
+      if (remoteAudio) remoteAudio.srcObject = null;
+      if (remoteVideo) remoteVideo.srcObject = null;
+      if (localVideo) localVideo.srcObject = null;
+
+      // Notify peer if requested
+      if (notifyPeer && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          id: "end-" + Date.now(),
+          from: myId,
+          to: peerId,
+          type: "call_ended",
+          payload: { callId, reason },
+          timestamp: Date.now()
+        }));
+      }
+
+      playCallEndTone();
+
+      // Log record
+      logCallRecord(peerId, callType, direction, durationSec);
+
+      // Hide modal
+      const modal = document.getElementById("active-call-modal");
+      if (modal) modal.style.display = "none";
+
+      currentCall = null;
+    }
+
+    // CALL IN-CALL CONTROLS
+    function toggleCallMuteAudio() {
+      if (!currentCall || !currentCall.localStream) return;
+      const audioTracks = currentCall.localStream.getAudioTracks();
+      if (audioTracks.length === 0) return;
+      const enabled = !audioTracks[0].enabled;
+      audioTracks.forEach(t => t.enabled = enabled);
+
+      const btn = document.getElementById("call-btn-mute-mic");
+      const onIcon = document.getElementById("icon-mic-on");
+      const offIcon = document.getElementById("icon-mic-off");
+
+      if (enabled) {
+        if (btn) btn.classList.remove("active-off");
+        if (onIcon) onIcon.style.display = "block";
+        if (offIcon) offIcon.style.display = "none";
+      } else {
+        if (btn) btn.classList.add("active-off");
+        if (onIcon) onIcon.style.display = "none";
+        if (offIcon) offIcon.style.display = "block";
+      }
+    }
+
+    function toggleCallVideo() {
+      if (!currentCall || !currentCall.localStream) return;
+      const videoTracks = currentCall.localStream.getVideoTracks();
+      if (videoTracks.length === 0) return;
+      const enabled = !videoTracks[0].enabled;
+      videoTracks.forEach(t => t.enabled = enabled);
+
+      const btn = document.getElementById("call-btn-toggle-video");
+      const onIcon = document.getElementById("icon-video-on");
+      const offIcon = document.getElementById("icon-video-off");
+
+      if (enabled) {
+        if (btn) btn.classList.remove("active-off");
+        if (onIcon) onIcon.style.display = "block";
+        if (offIcon) offIcon.style.display = "none";
+      } else {
+        if (btn) btn.classList.add("active-off");
+        if (onIcon) onIcon.style.display = "none";
+        if (offIcon) offIcon.style.display = "block";
+      }
+    }
+
+    let callFacingMode = 'user';
+    async function flipCallCamera() {
+      if (!currentCall || !currentCall.localStream || currentCall.type !== "video") return;
+      callFacingMode = (callFacingMode === 'user') ? 'environment' : 'user';
+      try {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: callFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+        const newVideoTrack = newStream.getVideoTracks()[0];
+        if (newVideoTrack && currentCall.pc) {
+          const senders = currentCall.pc.getSenders();
+          const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+          if (videoSender) {
+            videoSender.replaceTrack(newVideoTrack);
+          }
+          currentCall.localStream.getVideoTracks().forEach(t => t.stop());
+          currentCall.localStream.removeTrack(currentCall.localStream.getVideoTracks()[0]);
+          currentCall.localStream.addTrack(newVideoTrack);
+          const localVideo = document.getElementById("webrtc-local-video");
+          if (localVideo) localVideo.srcObject = currentCall.localStream;
+        }
+      } catch(e) {
+        console.warn("Failed flipping camera:", e);
+      }
+    }
+
+    // WEBRTC SIGNALING ROUTER
+    async function handleWebRTCSignalingMessage(env) {
+      const type = env.type;
+      const payload = env.payload || {};
+
+      if (type === "call_request") {
+        await handleIncomingCallRequest(env);
+        return;
+      }
+
+      if (type === "call_ringing") {
+        if (currentCall && currentCall.status === "ringing") {
+          const timerEl = document.getElementById("active-call-timer");
+          if (timerEl) timerEl.innerText = "Ringing...";
+        }
+        return;
+      }
+
+      if (type === "call_accepted") {
+        if (!currentCall) return;
+        stopCallTones();
+        if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
+        currentCall.status = "connecting";
+        const timerEl = document.getElementById("active-call-timer");
+        if (timerEl) timerEl.innerText = "Connecting...";
+
+        try {
+          currentCall.pc = createPeerConnection(currentCall.peerId, currentCall.type);
+          const offer = await currentCall.pc.createOffer();
+          await currentCall.pc.setLocalDescription(offer);
+          ws.send(JSON.stringify({
+            id: "offer-" + Date.now(),
+            from: myId,
+            to: currentCall.peerId,
+            type: "webrtc_offer",
+            payload: {
+              sdp: offer,
+              callId: currentCall.callId,
+              callType: currentCall.type
+            },
+            timestamp: Date.now()
+          }));
+        } catch (e) {
+          console.error("Error creating WebRTC offer:", e);
+          endActiveCall("offer_error");
+        }
+        return;
+      }
+
+      if (type === "call_rejected") {
+        stopCallTones();
+        if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
+        const reason = payload.reason || "declined";
+        const reasonMsg = reason === "busy" ? "User is currently busy on another call." : "Call declined.";
+        alert(reasonMsg);
+        endActiveCall("rejected", false);
+        return;
+      }
+
+      if (type === "call_ended") {
+        endActiveCall("peer_ended", false);
+        return;
+      }
+
+      if (type === "webrtc_offer") {
+        if (!currentCall || !currentCall.pc) return;
+        try {
+          await currentCall.pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+          if (currentCall.pendingCandidates && currentCall.pendingCandidates.length > 0) {
+            for (const c of currentCall.pendingCandidates) {
+              await currentCall.pc.addIceCandidate(new RTCIceCandidate(c));
+            }
+            currentCall.pendingCandidates = [];
+          }
+          const answer = await currentCall.pc.createAnswer();
+          await currentCall.pc.setLocalDescription(answer);
+          ws.send(JSON.stringify({
+            id: "ans-" + Date.now(),
+            from: myId,
+            to: currentCall.peerId,
+            type: "webrtc_answer",
+            payload: {
+              sdp: answer,
+              callId: currentCall.callId
+            },
+            timestamp: Date.now()
+          }));
+        } catch (e) {
+          console.error("Error handling WebRTC offer:", e);
+          endActiveCall("offer_error");
+        }
+        return;
+      }
+
+      if (type === "webrtc_answer") {
+        if (!currentCall || !currentCall.pc) return;
+        try {
+          await currentCall.pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+          if (currentCall.pendingCandidates && currentCall.pendingCandidates.length > 0) {
+            for (const c of currentCall.pendingCandidates) {
+              await currentCall.pc.addIceCandidate(new RTCIceCandidate(c));
+            }
+            currentCall.pendingCandidates = [];
+          }
+        } catch (e) {
+          console.error("Error setting WebRTC answer:", e);
+        }
+        return;
+      }
+
+      if (type === "webrtc_candidate") {
+        if (!currentCall || !payload.candidate) return;
+        if (currentCall.pc && currentCall.pc.remoteDescription) {
+          try {
+            await currentCall.pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+          } catch (e) {
+            console.warn("Error adding ICE candidate:", e);
+          }
+        } else if (currentCall) {
+          currentCall.pendingCandidates.push(payload.candidate);
+        }
+        return;
+      }
     }
 
     async function loadChatHistory() {
@@ -5057,6 +6157,8 @@
               await processInboundChatMessage(env);
             } else if (env.type === "media") {
               await processInboundMediaMessage(env);
+            } else if (env.type && (env.type.startsWith("call_") || env.type.startsWith("webrtc_"))) {
+              await handleWebRTCSignalingMessage(env);
             }
           } catch (e) {
             console.error("Error processing inbound message:", e, event.data);
