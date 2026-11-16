@@ -76,6 +76,7 @@ public class MainActivity extends BridgeActivity {
         super.onResume();
         isAppInForeground = true;
         VirgoForegroundService.isActivityInForeground = true;
+        NotificationHelper.cancelCallNotification(this);
         setupWebViewAndBridge();
         requestAppPermissions();
         startVirgoBackgroundService();

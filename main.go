@@ -48,7 +48,7 @@ type Client struct {
 	Send chan []byte
 }
 
-var serverBuildTime = "v2.8.9"
+var serverBuildTime = "v2.9.0"
 
 func normalizeUserID(raw string) string {
 	s := strings.ToLower(strings.TrimSpace(raw))
@@ -1016,7 +1016,8 @@ func (h *Hub) run() {
 				}
 			} else {
 				// 1. UNCONDITIONAL BACKGROUND WAKEUP FOR ANDROID NOTIFICATION POLLERS (DEDUPLICATED)
-				if env.Type == "chat" || env.Type == "media" {
+				hasAnyWaiters := false
+				if env.Type == "chat" || env.Type == "media" || env.Type == "call_request" || env.Type == "call_ended" || env.Type == "call_rejected" {
 					normTarget := normalizeUserID(target)
 					variants := []string{target, normTarget, "+91" + normTarget, "91" + normTarget}
 					seenWaiters := make(map[chan []byte]bool)
@@ -1026,6 +1027,7 @@ func (h *Hub) run() {
 							continue
 						}
 						if waiters, hasWaiters := h.pollWaiters[v]; hasWaiters && len(waiters) > 0 {
+							hasAnyWaiters = true
 							for ch := range waiters {
 								if !seenWaiters[ch] {
 									seenWaiters[ch] = true
@@ -1039,13 +1041,16 @@ func (h *Hub) run() {
 						}
 					}
 					if woken > 0 {
-						log.Printf("🚀 Woke up %d unique background pollers for target '%s'", woken, target)
+						log.Printf("🚀 Woke up %d unique background pollers for target '%s' (type=%s)", woken, target, env.Type)
 					}
 				}
 
 				// 2. ALWAYS STORE IN PENDING MESSAGES until recipient acknowledges delivery/read
-				if env.Type == "chat" || env.Type == "media" {
+				if env.Type == "chat" || env.Type == "media" || env.Type == "call_request" {
 					h.storePendingMessage(env.ID, sender, target, message)
+				}
+				if env.Type == "call_ended" || env.Type == "call_rejected" {
+					h.db.Exec(`DELETE FROM pending_messages WHERE (recipient_id = ? OR recipient_id = ?) AND payload LIKE '%call_request%';`, target, normalizeUserID(target))
 				}
 
 				// 3. DELIVER VIA ACTIVE WEBSOCKET IF RECIPIENT IS CONNECTED
@@ -1073,7 +1078,25 @@ func (h *Hub) run() {
 						log.Printf("⚠️ Active WS buffer full for %s", target)
 					}
 				} else {
-					log.Printf("⚠️ Recipient '%s' offline on WS. Message stored in pending_messages from %s", target, sender)
+					log.Printf("⚠️ Recipient '%s' offline on WS. Message stored in pending_messages from %s (type=%s)", target, sender, env.Type)
+					if env.Type == "call_request" && !hasAnyWaiters {
+						// Target is not on active WS and has no active background pollers: immediately notify caller
+						if senderClient := h.findClient(sender); senderClient != nil {
+							rejEnv, _ := json.Marshal(Envelope{
+								ID:        "rej-" + env.ID,
+								From:      target,
+								To:        sender,
+								Type:      "call_rejected",
+								Payload:   json.RawMessage(`{"reason":"offline","callId":"` + env.ID + `"}`),
+								Timestamp: time.Now().UnixMilli(),
+							})
+							select {
+							case senderClient.Send <- rejEnv:
+								log.Printf("📞 Sent instant offline call_rejected to caller %s", sender)
+							default:
+							}
+						}
+					}
 				}
 			}
 			h.mutex.Unlock()
@@ -1460,11 +1483,20 @@ WHERE (recipient_id = ? OR recipient_id = ? OR recipient_id = ? OR recipient_id 
 						text = "💬 New message"
 					} else if mType, ok := payloadMap["mediaType"].(string); ok && mType != "" {
 						text = "📷 " + mType
+					} else if env.Type == "call_request" {
+						cType := "Voice"
+						if ct, ok := payloadMap["callType"].(string); ok && ct == "video" {
+							cType = "Video"
+						}
+						text = fmt.Sprintf("📞 Incoming %s Call...", cType)
+					} else if env.Type == "call_ended" {
+						text = "Call ended"
 					}
 				}
 				pendingItems = append(pendingItems, map[string]interface{}{
 					"id":        msgID,
 					"from":      senderID,
+					"type":      env.Type,
 					"text":      text,
 					"timestamp": ts,
 				})
@@ -1535,6 +1567,14 @@ WHERE (recipient_id = ? OR recipient_id = ? OR recipient_id = ? OR recipient_id 
 					text = "💬 New message"
 				} else if mType, ok := payloadMap["mediaType"].(string); ok && mType != "" {
 					text = "📷 " + mType
+				} else if env.Type == "call_request" {
+					cType := "Voice"
+					if ct, ok := payloadMap["callType"].(string); ok && ct == "video" {
+						cType = "Video"
+					}
+					text = fmt.Sprintf("📞 Incoming %s Call...", cType)
+				} else if env.Type == "call_ended" {
+					text = "Call ended"
 				}
 			}
 			w.Header().Set("Content-Type", "application/json")
@@ -1543,6 +1583,7 @@ WHERE (recipient_id = ? OR recipient_id = ? OR recipient_id = ? OR recipient_id 
 					{
 						"id":        env.ID,
 						"from":      env.From,
+						"type":      env.Type,
 						"text":      text,
 						"timestamp": env.Timestamp,
 					},

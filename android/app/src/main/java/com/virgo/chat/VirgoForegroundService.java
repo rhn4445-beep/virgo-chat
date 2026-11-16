@@ -243,13 +243,21 @@ public class VirgoForegroundService extends Service {
                     String msgId = m.optString("id", "");
                     String from = m.optString("from", "Virgo Contact");
                     String text = m.optString("text", "New message");
+                    String type = m.optString("type", "chat");
 
-                    Log.d(TAG, "📩 Native Poller received message [" + msgId + "] from " + from + ": " + text);
+                    Log.d(TAG, "📩 Native Poller received message [" + msgId + "] from " + from + ": " + text + " (type=" + type + ")");
 
-                    // Post heads-up notification if app is in background OR user is viewing a different chat
-                    boolean inForegroundWithSameUser = isActivityInForeground && MainActivity.currentOpenChat != null && isSameUserId(MainActivity.currentOpenChat, from);
-                    if (!inForegroundWithSameUser) {
-                        NotificationHelper.postMessageNotification(this, msgId, from, text);
+                    if ("call_request".equals(type) || (text != null && text.contains("Call..."))) {
+                        // High-priority urgent incoming call
+                        NotificationHelper.postCallNotification(this, msgId, from, text);
+                    } else if ("call_ended".equals(type) || "call_rejected".equals(type)) {
+                        NotificationHelper.cancelCallNotification(this);
+                    } else {
+                        // Post heads-up notification if app is in background OR user is viewing a different chat
+                        boolean inForegroundWithSameUser = isActivityInForeground && MainActivity.currentOpenChat != null && isSameUserId(MainActivity.currentOpenChat, from);
+                        if (!inForegroundWithSameUser) {
+                            NotificationHelper.postMessageNotification(this, msgId, from, text);
+                        }
                     }
                 }
             }

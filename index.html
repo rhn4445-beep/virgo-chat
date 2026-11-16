@@ -3843,7 +3843,7 @@
     const isLocalDev = !isCapacitor && window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (window.location.port !== "");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = localStorage.getItem("virgo_active_client_version") || "v2.8.7";
+    let activeClientVersion = localStorage.getItem("virgo_active_client_version") || "v2.9.0";
     let updateBannerDismissed = false;
     let updateModalDismissed = false;
     let pendingNewVersion = "";
@@ -3927,7 +3927,7 @@
       if (btn) btn.style.display = "none";
       if (prog) prog.style.display = "block";
 
-      const targetVersion = pendingNewVersion || "v2.8.7";
+      const targetVersion = pendingNewVersion || "v2.9.0";
       localStorage.setItem("virgo_active_client_version", targetVersion);
       activeClientVersion = targetVersion;
 
@@ -6930,8 +6930,15 @@
         };
         stream = await navigator.mediaDevices.getUserMedia(constraints);
       } catch (err) {
-        console.error("Failed getting local media stream:", err);
-        return alert("Microphone / Camera access is required to place a call: " + (err.message || err));
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: callType === "video"
+          });
+        } catch (err2) {
+          console.error("Failed getting local media stream:", err2);
+          return alert("Microphone / Camera access is required to place a call: " + (err2.message || err2));
+        }
       }
 
       const callId = "call-" + Date.now() + "-" + Math.random().toString(36).substr(2, 6);
@@ -6943,7 +6950,7 @@
         peerAvatar: peerAvatarUrl,
         type: callType,
         direction: "outgoing",
-        status: "ringing",
+        status: "calling",
         startTime: null,
         timerInterval: null,
         pc: null,
@@ -6959,6 +6966,10 @@
       startRingbackTone();
 
       // 4. Send call request to peer via WebSocket
+      const myProf = (typeof getLocalProfile === "function" ? getLocalProfile(myId) : null) || {};
+      const callerDisplayName = myProf.displayName || (myId ? myId.split("@")[0] : "Virgo User");
+      const callerAvatarUrl = myProf.avatarUrl || "icon.png?v=celestial";
+
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
           id: "req-" + Date.now(),
@@ -6968,8 +6979,8 @@
           payload: {
             callId,
             callType,
-            callerName: myProfileName || myId,
-            callerAvatar: myProfileAvatar || "icon.png?v=celestial"
+            callerName: callerDisplayName,
+            callerAvatar: callerAvatarUrl
           },
           timestamp: Date.now()
         }));
@@ -6981,7 +6992,7 @@
       // 5. Outgoing ringing timeout (35 seconds)
       if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
       callTimeoutTimer = setTimeout(() => {
-        if (currentCall && currentCall.status === "ringing") {
+        if (currentCall && (currentCall.status === "calling" || currentCall.status === "ringing")) {
           endActiveCall("no_answer");
           alert(`${peerDisplayName} is not answering.`);
         }
@@ -7001,16 +7012,24 @@
       // Handle remote incoming tracks
       pc.ontrack = (event) => {
         console.log("WebRTC remote track received:", event);
-        if (event.streams && event.streams[0]) {
-          currentCall.remoteStream = event.streams[0];
+        let stream = (event.streams && event.streams[0]) ? event.streams[0] : null;
+        if (!stream && event.track) {
+          if (!currentCall.remoteStream) currentCall.remoteStream = new MediaStream();
+          currentCall.remoteStream.addTrack(event.track);
+          stream = currentCall.remoteStream;
+        } else if (stream) {
+          currentCall.remoteStream = stream;
+        }
+
+        if (stream) {
           const remoteAudio = document.getElementById("webrtc-remote-audio");
           const remoteVideo = document.getElementById("webrtc-remote-video");
           if (remoteAudio) {
-            remoteAudio.srcObject = event.streams[0];
+            remoteAudio.srcObject = stream;
             remoteAudio.play().catch(e => console.log("Remote audio play error:", e));
           }
           if (remoteVideo && currentCall.type === "video") {
-            remoteVideo.srcObject = event.streams[0];
+            remoteVideo.srcObject = stream;
             remoteVideo.play().catch(e => console.log("Remote video play error:", e));
           }
         }
@@ -7039,7 +7058,7 @@
         if (pc.connectionState === "connected") {
           stopCallTones();
           if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
-          if (currentCall) {
+          if (currentCall && currentCall.status !== "connected") {
             currentCall.status = "connected";
             startCallTimer();
             const statusLabel = document.getElementById("voice-call-status-label");
@@ -7047,6 +7066,20 @@
           }
         } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
           endActiveCall("connection_lost");
+        }
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        console.log("WebRTC ICE state:", pc.iceConnectionState);
+        if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+          stopCallTones();
+          if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
+          if (currentCall && currentCall.status !== "connected") {
+            currentCall.status = "connected";
+            startCallTimer();
+            const statusLabel = document.getElementById("voice-call-status-label");
+            if (statusLabel) statusLabel.innerText = "Encrypted Connection Established";
+          }
         }
       };
 
@@ -7060,7 +7093,7 @@
 
       document.getElementById("active-call-peer-avatar").src = call.peerAvatar;
       document.getElementById("active-call-peer-name").innerText = call.peerName;
-      document.getElementById("active-call-timer").innerText = "Ringing...";
+      document.getElementById("active-call-timer").innerText = (call.status === "calling") ? "Calling..." : "Ringing...";
 
       const isVideo = call.type === "video";
       const voiceWrap = document.getElementById("voice-call-avatar-wrap");
@@ -7105,6 +7138,13 @@
       const callId = payload.callId;
       const callType = payload.callType || "audio";
 
+      // Ignore stale call requests that arrived after timeout (>45s)
+      const callAge = Date.now() - (env.timestamp || Date.now());
+      if (callAge > 45000) {
+        console.log("Ignoring stale incoming call request, age:", callAge, "ms");
+        return;
+      }
+
       // If already on a call, reject automatically as busy
       if (currentCall) {
         if (ws && ws.readyState === WebSocket.OPEN) {
@@ -7120,12 +7160,18 @@
         return;
       }
 
+      let callerDisplayName = payload.callerName || callerId;
+      let callerAvatarUrl = payload.callerAvatar || "icon.png?v=celestial";
+      const localCallerProf = (typeof getLocalProfile === "function" ? getLocalProfile(callerId) : null) || profileCache[callerId];
+      if (localCallerProf && localCallerProf.displayName) callerDisplayName = localCallerProf.displayName;
+      if (localCallerProf && localCallerProf.avatarUrl) callerAvatarUrl = localCallerProf.avatarUrl;
+
       incomingCallData = {
         callId,
         callerId,
         callType,
-        callerName: payload.callerName || callerId,
-        callerAvatar: payload.callerAvatar || "icon.png?v=celestial"
+        callerName: callerDisplayName,
+        callerAvatar: callerAvatarUrl
       };
 
       // Send ringing acknowledgement back to caller
@@ -7187,9 +7233,16 @@
         };
         stream = await navigator.mediaDevices.getUserMedia(constraints);
       } catch (err) {
-        console.error("Failed acquiring media for incoming call:", err);
-        declineIncomingCall("media_error");
-        return alert("Failed to access camera/microphone: " + (err.message || err));
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: callType === "video"
+          });
+        } catch (err2) {
+          console.error("Failed acquiring media for incoming call:", err2);
+          declineIncomingCall("media_error");
+          return alert("Failed to access camera/microphone: " + (err2.message || err2));
+        }
       }
 
       currentCall = {
@@ -7399,9 +7452,12 @@
       }
 
       if (type === "call_ringing") {
-        if (currentCall && currentCall.status === "ringing") {
+        if (currentCall && (currentCall.status === "ringing" || currentCall.status === "calling")) {
+          currentCall.status = "ringing";
           const timerEl = document.getElementById("active-call-timer");
           if (timerEl) timerEl.innerText = "Ringing...";
+          const statusLabel = document.getElementById("voice-call-status-label");
+          if (statusLabel) statusLabel.innerText = "Recipient's device is ringing...";
         }
         return;
       }
@@ -7441,7 +7497,10 @@
         stopCallTones();
         if (callTimeoutTimer) clearTimeout(callTimeoutTimer);
         const reason = payload.reason || "declined";
-        const reasonMsg = reason === "busy" ? "User is currently busy on another call." : "Call declined.";
+        let reasonMsg = "Call declined.";
+        if (reason === "busy") reasonMsg = "User is currently busy on another call.";
+        else if (reason === "offline") reasonMsg = "Contact is currently offline.";
+        else if (reason === "missed") reasonMsg = "No answer from contact.";
         alert(reasonMsg);
         endActiveCall("rejected", false);
         return;

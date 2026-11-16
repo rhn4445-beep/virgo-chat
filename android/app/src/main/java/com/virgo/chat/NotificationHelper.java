@@ -22,6 +22,9 @@ import java.util.Map;
 public class NotificationHelper {
     private static final String TAG = "VirgoNotifHelper";
     public static final String MSG_CHANNEL_ID = "virgo_chat_messages";
+    public static final String CALL_CHANNEL_ID = "virgo_incoming_calls";
+    public static final int CALL_NOTIFICATION_ID = 8888;
+    private static volatile Ringtone activeCallRingtone = null;
 
     // Deduplication cache: keeps last 100 message IDs with timestamps
     private static final Map<String, Long> notifiedMessages = Collections.synchronizedMap(
@@ -148,5 +151,139 @@ public class NotificationHelper {
         } catch (Throwable t) {
             Log.e(TAG, "Error posting notification: " + t.getMessage(), t);
         }
+    }
+
+    public static void createCallNotificationChannel(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                CharSequence name = "Virgo Incoming Calls";
+                String description = "Urgent high-priority incoming voice and video calls";
+                int importance = NotificationManager.IMPORTANCE_HIGH;
+                NotificationChannel channel = new NotificationChannel(CALL_CHANNEL_ID, name, importance);
+                channel.setDescription(description);
+                channel.enableVibration(true);
+                channel.setVibrationPattern(new long[]{0, 1000, 500, 1000, 500});
+                channel.enableLights(true);
+                channel.setLightColor(0xFFF5C542);
+                channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+                channel.setBypassDnd(true);
+
+                AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                    .build();
+                Uri defaultSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+                if (defaultSound == null) {
+                    defaultSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+                }
+                channel.setSound(defaultSound, audioAttributes);
+
+                NotificationManager manager = context.getSystemService(NotificationManager.class);
+                if (manager != null) {
+                    manager.createNotificationChannel(channel);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error creating call notification channel: " + e.getMessage());
+            }
+        }
+    }
+
+    public static synchronized void postCallNotification(Context context, String callId, String caller, String callText) {
+        try {
+            createCallNotificationChannel(context);
+
+            Intent intent = new Intent(context, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.putExtra("action", "incoming_call");
+            intent.putExtra("callId", callId);
+            intent.putExtra("caller", caller);
+
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                context,
+                CALL_NOTIFICATION_ID,
+                intent,
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
+            );
+
+            // Play ringtone
+            try {
+                if (activeCallRingtone != null && activeCallRingtone.isPlaying()) {
+                    activeCallRingtone.stop();
+                }
+                Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+                if (soundUri == null) soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+                activeCallRingtone = RingtoneManager.getRingtone(context.getApplicationContext(), soundUri);
+                if (activeCallRingtone != null) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        activeCallRingtone.setLooping(true);
+                    }
+                    activeCallRingtone.play();
+                }
+            } catch (Exception ignored) {}
+
+            // Vibrate
+            try {
+                Vibrator v = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+                if (v != null && v.hasVibrator()) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        v.vibrate(VibrationEffect.createWaveform(new long[]{0, 1000, 500, 1000, 500}, 0));
+                    } else {
+                        v.vibrate(new long[]{0, 1000, 500, 1000, 500}, 0);
+                    }
+                }
+            } catch (Exception ignored) {}
+
+            Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CALL_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_virgo)
+                .setContentTitle(caller != null ? caller : "Incoming Virgo Call")
+                .setContentText(callText != null ? callText : "Incoming Call...")
+                .setCategory(NotificationCompat.CATEGORY_CALL)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setOngoing(true)
+                .setAutoCancel(true)
+                .setSound(soundUri)
+                .setVibrate(new long[]{0, 1000, 500, 1000, 500})
+                .setColor(0xFFF5C542)
+                .setFullScreenIntent(pendingIntent, true)
+                .setContentIntent(pendingIntent);
+
+            try {
+                builder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher));
+            } catch (Throwable ignored) {}
+
+            NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notificationManager != null) {
+                notificationManager.notify(CALL_NOTIFICATION_ID, builder.build());
+                Log.d(TAG, "📞 Posted urgent incoming call notification for caller: " + caller);
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Error posting call notification: " + t.getMessage(), t);
+        }
+    }
+
+    public static synchronized void cancelCallNotification(Context context) {
+        try {
+            if (activeCallRingtone != null && activeCallRingtone.isPlaying()) {
+                activeCallRingtone.stop();
+            }
+            activeCallRingtone = null;
+        } catch (Exception ignored) {}
+
+        try {
+            Vibrator v = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+            if (v != null) {
+                v.cancel();
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.cancel(CALL_NOTIFICATION_ID);
+                Log.d(TAG, "📞 Cancelled call notification ID " + CALL_NOTIFICATION_ID);
+            }
+        } catch (Exception ignored) {}
     }
 }
