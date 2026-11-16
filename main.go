@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -11,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/smtp"
 	"net/url"
@@ -375,7 +377,101 @@ func getBrevoKey() string {
 	return ""
 }
 
+func sendOTPEmailViaAPI(toEmail, otp string) error {
+	resendKey := strings.TrimSpace(os.Getenv("RESEND_API_KEY"))
+	brevoKey := strings.TrimSpace(os.Getenv("BREVO_API_KEY"))
+
+	htmlContent := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b141a; color: #e9edef; padding: 24px; margin: 0;">
+  <div style="max-width: 480px; margin: 0 auto; background-color: #111b21; border-radius: 16px; border: 1px solid #222e35; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
+    <div style="background: linear-gradient(135deg, #00a884, #008069); padding: 28px 24px; text-align: center;">
+      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">Virgo Messenger</h1>
+      <p style="margin: 6px 0 0 0; color: #e9edef; font-size: 14px; opacity: 0.9;">Secure Sign-in Verification</p>
+    </div>
+    <div style="padding: 32px 24px; text-align: center;">
+      <p style="margin: 0 0 16px 0; color: #8696a0; font-size: 14px;">Use this 6-digit verification code to complete your login to Virgo Messenger:</p>
+      <div style="background: #202c33; border: 1px solid #00a884; border-radius: 12px; padding: 18px 24px; display: inline-block; margin: 12px 0 24px 0;">
+        <span style="font-family: 'Courier New', monospace; font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #00a884;">%s</span>
+      </div>
+      <p style="margin: 0 0 8px 0; color: #8696a0; font-size: 13px;">This code is valid for <strong>10 minutes</strong>. Do not share it with anyone.</p>
+      <p style="margin: 16px 0 0 0; color: #667781; font-size: 12px;">If you did not request this login code, you can safely ignore this email.</p>
+    </div>
+    <div style="background: #0c1317; padding: 16px 24px; text-align: center; border-top: 1px solid #222e35;">
+      <p style="margin: 0; color: #667781; font-size: 12px;">&copy; 2026 Virgo Messenger. End-to-End Encrypted Communication.</p>
+    </div>
+  </div>
+</body>
+</html>`, otp)
+
+	// 1. Resend API (HTTPS Port 443)
+	if resendKey != "" {
+		payload := map[string]interface{}{
+			"from":    getEnv("EMAIL_FROM", "Virgo Messenger <onboarding@resend.dev>"),
+			"to":      []string{toEmail},
+			"subject": "Virgo Messenger - Verification Code: " + otp,
+			"html":    htmlContent,
+		}
+		data, _ := json.Marshal(payload)
+		req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewBuffer(data))
+		if err == nil {
+			req.Header.Set("Authorization", "Bearer "+resendKey)
+			req.Header.Set("Content-Type", "application/json")
+			client := &http.Client{Timeout: 8 * time.Second}
+			resp, err := client.Do(req)
+			if err == nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				resp.Body.Close()
+				log.Printf("📧 Email delivered via Resend HTTPS API to %s", toEmail)
+				return nil
+			}
+			if resp != nil {
+				resp.Body.Close()
+			}
+		}
+	}
+
+	// 2. Brevo REST API (HTTPS Port 443)
+	if brevoKey != "" {
+		payload := map[string]interface{}{
+			"sender": map[string]string{
+				"name":  "Virgo Messenger",
+				"email": getEnv("BREVO_SENDER_EMAIL", "c1981e001@smtp-brevo.com"),
+			},
+			"to": []map[string]string{
+				{"email": toEmail},
+			},
+			"subject":     "Virgo Messenger - Verification Code: " + otp,
+			"htmlContent": htmlContent,
+		}
+		data, _ := json.Marshal(payload)
+		req, err := http.NewRequest("POST", "https://api.brevo.com/v3/smtp/email", bytes.NewBuffer(data))
+		if err == nil {
+			req.Header.Set("api-key", brevoKey)
+			req.Header.Set("Content-Type", "application/json")
+			client := &http.Client{Timeout: 8 * time.Second}
+			resp, err := client.Do(req)
+			if err == nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				resp.Body.Close()
+				log.Printf("📧 Email delivered via Brevo HTTPS API to %s", toEmail)
+				return nil
+			}
+			if resp != nil {
+				resp.Body.Close()
+			}
+		}
+	}
+
+	return fmt.Errorf("no configured HTTPS email API provider")
+}
+
 func sendOTPEmail(toEmail, otp string) error {
+	// Try HTTPS REST API first (works on Render free tier where port 587 is blocked)
+	if err := sendOTPEmailViaAPI(toEmail, otp); err == nil {
+		return nil
+	}
+
+	// Fallback to SMTP with 3-second dial timeout
 	host := getEnv("SMTP_HOST", "smtp-relay.brevo.com")
 	port := getEnv("SMTP_PORT", "587")
 	user := getEnv("SMTP_EMAIL", "c1981e001@smtp-brevo.com")
@@ -383,8 +479,14 @@ func sendOTPEmail(toEmail, otp string) error {
 	sender := getEnv("SMTP_FROM", user)
 
 	addr := fmt.Sprintf("%s:%s", host, port)
-	auth := smtp.PlainAuth("", user, password, host)
+	conn, err := net.DialTimeout("tcp", addr, 3*time.Second)
+	if err != nil {
+		log.Printf("⚠️ SMTP dial timeout to %s (Render free blocks outbound port 587): %v", addr, err)
+		return fmt.Errorf("SMTP outbound port blocked by cloud host: %v", err)
+	}
+	conn.Close()
 
+	auth := smtp.PlainAuth("", user, password, host)
 	subject := "Virgo Messenger - Verification Code: " + otp
 	body := fmt.Sprintf("MIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nFrom: Virgo Messenger <%s>\r\nTo: %s\r\nSubject: %s\r\n\r\n"+
 		`<!DOCTYPE html>
@@ -411,12 +513,12 @@ func sendOTPEmail(toEmail, otp string) error {
 </body>
 </html>`, sender, toEmail, subject, otp)
 
-	err := smtp.SendMail(addr, auth, sender, []string{toEmail}, []byte(body))
+	err = smtp.SendMail(addr, auth, sender, []string{toEmail}, []byte(body))
 	if err != nil {
 		log.Printf("❌ smtp.SendMail error to %s: %v", toEmail, err)
 		return err
 	}
-	log.Printf("📧 Verification OTP email successfully sent to %s", toEmail)
+	log.Printf("📧 Verification OTP email successfully sent via SMTP to %s", toEmail)
 	return nil
 }
 
@@ -489,14 +591,17 @@ func handleAuthSendOTP(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Deliver email via SMTP
+		// Always log verification code to server logs
+		log.Printf("🔑 [VIRGO VERIFICATION CODE] Email: %s | Code: %s", email, otp)
+
+		// Deliver email via HTTPS API or SMTP
 		if sendErr := sendOTPEmail(email, otp); sendErr != nil {
 			log.Printf("❌ Failed to deliver OTP email to %s: %v", email, sendErr)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"status":  "error",
-				"message": "Failed to deliver verification code to your email. Please verify the address and try again.",
+				"message": "Render Free Tier blocks outbound SMTP (port 587). Please configure BREVO_API_KEY (xkeysib-...) or RESEND_API_KEY (re_...) in your Render environment variables to send emails via Port 443.",
 			})
 			return
 		}
