@@ -182,6 +182,28 @@ public class MainActivity extends BridgeActivity {
                         }
 
                         @JavascriptInterface
+                        public String getUserId() {
+                            try {
+                                String u = getSharedPreferences("virgo_prefs", Context.MODE_PRIVATE)
+                                    .getString("active_user_id", "");
+                                return u != null ? u : "";
+                            } catch (Exception e) {
+                                return "";
+                            }
+                        }
+
+                        @JavascriptInterface
+                        public void clearUserId() {
+                            try {
+                                getSharedPreferences("virgo_prefs", Context.MODE_PRIVATE)
+                                    .edit()
+                                    .remove("active_user_id")
+                                    .apply();
+                                Log.d(TAG, "Cleared active_user_id from native preferences");
+                            } catch (Exception ignored) {}
+                        }
+
+                        @JavascriptInterface
                         public void setActiveChat(String peerId) {
                             currentOpenChat = peerId != null ? peerId.trim().toLowerCase() : "";
                             Log.d(TAG, "Current active chat updated: " + currentOpenChat);
