@@ -2436,8 +2436,16 @@
         <button onclick="triggerCameraCaptureAction('camera')" style="background:var(--bg-card);border:1px solid var(--border-starlight);border-radius:14px;padding:12px 14px;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;cursor:pointer;text-align:left;">
           <span style="font-size:22px;">📸</span>
           <div>
-            <div style="color:#f8fafc;">Take Photo / Video</div>
+            <div style="color:#f8fafc;">Take Photo (Camera)</div>
             <div style="font-size:11.5px;color:var(--text-muted);font-weight:400;">Open device camera directly</div>
+          </div>
+        </button>
+
+        <button onclick="triggerCameraCaptureAction('live_viewfinder')" style="background:var(--bg-card);border:1px solid var(--border-starlight);border-radius:14px;padding:12px 14px;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;cursor:pointer;text-align:left;">
+          <span style="font-size:22px;">📹</span>
+          <div>
+            <div style="color:#f8fafc;">Live Viewfinder (In-App)</div>
+            <div style="font-size:11.5px;color:var(--text-muted);font-weight:400;">Capture snapshot with live camera preview</div>
           </div>
         </button>
 
@@ -2463,7 +2471,40 @@
       </div>
     </div>
   </div>
-  <input type="file" id="header-camera-input" accept="image/*,video/*" capture="environment" style="display:none;" onchange="handleHeaderMediaCapture(event)">
+
+  <!-- LIVE CAMERA VIEWFINDER MODAL -->
+  <div class="virgo-modal" id="live-viewfinder-modal" style="display:none;align-items:center;justify-content:center;">
+    <div class="virgo-dialog" style="max-width:400px;width:92%;padding:18px;text-align:center;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-size:16px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px;">
+          <span style="color:var(--virgo-gold);">📷</span> Camera Viewfinder
+        </div>
+        <button onclick="closeLiveViewfinder()" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;">✕</button>
+      </div>
+
+      <div style="position:relative;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--border-starlight);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;">
+        <video id="viewfinder-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;"></video>
+        <div id="viewfinder-error" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:85%;padding:12px;background:rgba(239,68,68,0.25);border:1px solid rgba(239,68,68,0.5);border-radius:10px;font-size:12px;color:#fca5a5;backdrop-filter:blur(6px);"></div>
+      </div>
+      <canvas id="viewfinder-canvas" style="display:none;"></canvas>
+
+      <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-top:16px;">
+        <button onclick="switchCameraFacingMode()" title="Flip Camera" style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid var(--border-starlight);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4"/><path d="M4 8V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><circle cx="12" cy="12" r="3"/><path d="M8 12h.01"/><path d="M16 12h.01"/></svg>
+        </button>
+
+        <button onclick="captureLiveSnapshot()" title="Capture Photo" style="width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,var(--virgo-gold-bright),var(--virgo-gold));border:4px solid rgba(255,255,255,0.25);box-shadow:0 0 20px rgba(245,197,66,0.5);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+          <div style="width:24px;height:24px;border-radius:50%;background:#06090e;"></div>
+        </button>
+
+        <button onclick="closeLiveViewfinder()" title="Cancel" style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid var(--border-starlight);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="header-camera-input" accept="image/*" capture="environment" style="display:none;" onchange="handleHeaderMediaCapture(event)">
   <input type="file" id="header-gallery-input" accept="image/*,video/*" style="display:none;" onchange="handleHeaderMediaCapture(event)">
 
   <!-- STORAGE & DATA VAULT MODAL -->
@@ -4433,16 +4474,25 @@
       if (m) m.style.display = "none";
       if (type === 'media') {
         const inp = document.getElementById('attach-media-input');
-        if (inp) inp.click();
+        if (inp) { inp.value = ""; inp.click(); }
       } else if (type === 'doc') {
         const inp = document.getElementById('attach-doc-input');
-        if (inp) inp.click();
+        if (inp) { inp.value = ""; inp.click(); }
       } else if (type === 'camera') {
         const inp = document.getElementById('chat-camera-capture-input');
-        if (inp) inp.click();
+        if (window.AndroidNative) {
+          if (inp) { inp.value = ""; inp.click(); }
+        } else {
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            openLiveViewfinder(activeChatId);
+          } else if (inp) {
+            inp.value = "";
+            inp.click();
+          }
+        }
       } else if (type === 'audio') {
         const inp = document.getElementById('attach-audio-input');
-        if (inp) inp.click();
+        if (inp) { inp.value = ""; inp.click(); }
       }
     }
 
@@ -4565,13 +4615,122 @@
       closeCameraModal();
       if (type === 'camera') {
         const inp = document.getElementById("header-camera-input");
-        if (inp) inp.click();
+        if (inp) { inp.value = ""; inp.click(); }
+      } else if (type === 'live_viewfinder') {
+        openLiveViewfinder(activeChatId || null);
       } else if (type === 'gallery') {
         const inp = document.getElementById("header-gallery-input");
-        if (inp) inp.click();
+        if (inp) { inp.value = ""; inp.click(); }
       } else if (type === 'text') {
         promptNewStatusUpdate();
       }
+    }
+
+    // LIVE CAMERA VIEWFINDER (In-App Webcam & Video Stream)
+    let liveMediaStream = null;
+    let currentFacingMode = 'user';
+    let viewfinderTargetChatId = null;
+
+    async function openLiveViewfinder(targetChat = null) {
+      viewfinderTargetChatId = targetChat || activeChatId || null;
+      const modal = document.getElementById("live-viewfinder-modal");
+      if (modal) modal.style.display = "flex";
+      await startViewfinderStream(currentFacingMode);
+    }
+
+    async function startViewfinderStream(facingMode = 'user') {
+      if (liveMediaStream) {
+        liveMediaStream.getTracks().forEach(t => t.stop());
+        liveMediaStream = null;
+      }
+      const video = document.getElementById("viewfinder-video");
+      const errorMsg = document.getElementById("viewfinder-error");
+      if (errorMsg) errorMsg.style.display = "none";
+
+      try {
+        const constraints = {
+          video: {
+            facingMode: { ideal: facingMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        };
+        liveMediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (video) {
+          video.srcObject = liveMediaStream;
+          video.play().catch(e => console.log("Video play error:", e));
+        }
+      } catch (err) {
+        console.warn("Target camera stream error, trying fallback:", err);
+        try {
+          liveMediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          if (video) {
+            video.srcObject = liveMediaStream;
+            video.play().catch(e => console.log("Video play error:", e));
+          }
+        } catch (fallbackErr) {
+          console.error("Camera access failed:", fallbackErr);
+          if (errorMsg) {
+            errorMsg.innerText = "Camera permission denied or camera device unavailable.";
+            errorMsg.style.display = "block";
+          }
+        }
+      }
+    }
+
+    function switchCameraFacingMode() {
+      currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+      startViewfinderStream(currentFacingMode);
+    }
+
+    function closeLiveViewfinder() {
+      if (liveMediaStream) {
+        liveMediaStream.getTracks().forEach(t => t.stop());
+        liveMediaStream = null;
+      }
+      const video = document.getElementById("viewfinder-video");
+      if (video) video.srcObject = null;
+      const modal = document.getElementById("live-viewfinder-modal");
+      if (modal) modal.style.display = "none";
+    }
+
+    async function captureLiveSnapshot() {
+      const video = document.getElementById("viewfinder-video");
+      const canvas = document.getElementById("viewfinder-canvas");
+      if (!video || !canvas || !liveMediaStream) return;
+
+      const width = video.videoWidth || 640;
+      const height = video.videoHeight || 480;
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, width, height);
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const file = new File([blob], "camera_snapshot_" + Date.now() + ".jpg", { type: "image/jpeg" });
+        closeLiveViewfinder();
+
+        if (viewfinderTargetChatId) {
+          await uploadAndSendMediaFile(file, viewfinderTargetChatId);
+        } else {
+          const formData = new FormData();
+          formData.append("file", file, file.name);
+          try {
+            const res = await fetch(`${BACKEND_BASE}/upload`, { method: "POST", body: formData });
+            const data = await res.json();
+            if (data.url) {
+              const fullUrl = data.url.startsWith("/") ? BACKEND_BASE + data.url : data.url;
+              addMomentPost(fullUrl, "photo");
+              switchMainTab("updates");
+            }
+          } catch (err) {
+            alert("Upload error: " + err);
+          }
+        }
+      }, "image/jpeg", 0.92);
     }
 
     async function handleHeaderMediaCapture(event) {

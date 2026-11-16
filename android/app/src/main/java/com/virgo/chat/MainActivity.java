@@ -1,5 +1,6 @@
 package com.virgo.chat;
 
+import android.Manifest;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -18,31 +19,45 @@ import android.os.Environment;
 import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
+import android.webkit.PermissionRequest;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.Toast;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.FileProvider;
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebChromeClient;
 
 public class MainActivity extends BridgeActivity {
     private static final String TAG = "VirgoNative";
     private static final String CHANNEL_ID = "virgo_chat_messages";
     private static final int PERMISSION_REQ_CODE = 101;
+    private static final int FILE_CHOOSER_REQ_CODE = 2001;
+    private static final int CAMERA_PERMISSION_REQ_CODE = 2002;
     public static volatile boolean isAppInForeground = false;
     public static volatile String currentOpenChat = "";
+
+    private ValueCallback<Uri[]> mFilePathCallback;
+    private Uri mCameraPhotoUri;
+    private boolean isWebChromeClientAttached = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         createNotificationChannel();
         setupWebViewAndBridge();
-        requestNotificationPermission();
+        requestAppPermissions();
         startVirgoBackgroundService();
         syncUserIdFromWebView();
     }
@@ -61,7 +76,7 @@ public class MainActivity extends BridgeActivity {
         isAppInForeground = true;
         VirgoForegroundService.isActivityInForeground = true;
         setupWebViewAndBridge();
-        requestNotificationPermission();
+        requestAppPermissions();
         startVirgoBackgroundService();
         syncUserIdFromWebView();
         try {
@@ -124,6 +139,70 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    private Intent createCameraIntent() {
+        try {
+            Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            File photoFile = null;
+            try {
+                File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+                if (storageDir == null) {
+                    storageDir = getCacheDir();
+                }
+                if (!storageDir.exists()) {
+                    storageDir.mkdirs();
+                }
+                photoFile = File.createTempFile("VIRGO_CAM_" + System.currentTimeMillis() + "_", ".jpg", storageDir);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed creating photo file in external dir: " + e.getMessage());
+                try {
+                    photoFile = File.createTempFile("VIRGO_CAM_" + System.currentTimeMillis() + "_", ".jpg", getCacheDir());
+                } catch (Exception ex) {
+                    Log.e(TAG, "Failed creating photo file in cache dir: " + ex.getMessage());
+                }
+            }
+
+            if (photoFile != null) {
+                mCameraPhotoUri = FileProvider.getUriForFile(
+                    this,
+                    getPackageName() + ".fileprovider",
+                    photoFile
+                );
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCameraPhotoUri);
+                takePictureIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                return takePictureIntent;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed creating camera intent: " + e.getMessage(), e);
+        }
+        return null;
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == FILE_CHOOSER_REQ_CODE) {
+            if (mFilePathCallback != null) {
+                Uri[] results = null;
+                if (resultCode == RESULT_OK) {
+                    if (data != null && data.getData() != null) {
+                        results = new Uri[]{ data.getData() };
+                    } else if (data != null && data.getClipData() != null) {
+                        int count = data.getClipData().getItemCount();
+                        results = new Uri[count];
+                        for (int i = 0; i < count; i++) {
+                            results[i] = data.getClipData().getItemAt(i).getUri();
+                        }
+                    } else if (mCameraPhotoUri != null) {
+                        results = new Uri[]{ mCameraPhotoUri };
+                    }
+                }
+                mFilePathCallback.onReceiveValue(results);
+                mFilePathCallback = null;
+            }
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
     private void setupWebViewAndBridge() {
         runOnUiThread(() -> {
             try {
@@ -136,10 +215,93 @@ public class MainActivity extends BridgeActivity {
                     settings.setMediaPlaybackRequiresUserGesture(false);
                     settings.setJavaScriptCanOpenWindowsAutomatically(true);
                     settings.setSupportMultipleWindows(true);
+                    settings.setAllowFileAccess(true);
+                    settings.setAllowContentAccess(true);
 
                     String ua = settings.getUserAgentString();
                     if (ua != null && ua.contains("; wv")) {
                         settings.setUserAgentString(ua.replace("; wv", ""));
+                    }
+
+                    if (!isWebChromeClientAttached) {
+                        webView.setWebChromeClient(new BridgeWebChromeClient(this.bridge) {
+                            @Override
+                            public void onPermissionRequest(final PermissionRequest request) {
+                                runOnUiThread(() -> {
+                                    try {
+                                        Log.d(TAG, "WebView requested WebRTC permissions: " + java.util.Arrays.toString(request.getResources()));
+                                        request.grant(request.getResources());
+                                    } catch (Exception e) {
+                                        Log.e(TAG, "Error in onPermissionRequest grant: " + e.getMessage());
+                                        try {
+                                            super.onPermissionRequest(request);
+                                        } catch (Exception ignored) {}
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
+                                Log.d(TAG, "onShowFileChooser triggered. Capture: " + (fileChooserParams != null ? fileChooserParams.isCaptureEnabled() : false));
+                                if (mFilePathCallback != null) {
+                                    mFilePathCallback.onReceiveValue(null);
+                                    mFilePathCallback = null;
+                                }
+                                mFilePathCallback = filePathCallback;
+
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                    if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                                        requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, CAMERA_PERMISSION_REQ_CODE);
+                                    }
+                                }
+
+                                Intent takePictureIntent = createCameraIntent();
+                                boolean isCapture = fileChooserParams != null && fileChooserParams.isCaptureEnabled();
+
+                                if (isCapture && takePictureIntent != null) {
+                                    try {
+                                        startActivityForResult(takePictureIntent, FILE_CHOOSER_REQ_CODE);
+                                        return true;
+                                    } catch (Exception e) {
+                                        Log.e(TAG, "Direct camera launch failed, falling back to chooser: " + e.getMessage());
+                                    }
+                                }
+
+                                Intent contentSelectionIntent = null;
+                                if (fileChooserParams != null) {
+                                    try {
+                                        contentSelectionIntent = fileChooserParams.createIntent();
+                                    } catch (Exception ignored) {}
+                                }
+                                if (contentSelectionIntent == null) {
+                                    contentSelectionIntent = new Intent(Intent.ACTION_GET_CONTENT);
+                                    contentSelectionIntent.addCategory(Intent.CATEGORY_OPENABLE);
+                                    contentSelectionIntent.setType("*/*");
+                                }
+
+                                Intent chooserIntent = new Intent(Intent.ACTION_CHOOSER);
+                                chooserIntent.putExtra(Intent.EXTRA_INTENT, contentSelectionIntent);
+                                chooserIntent.putExtra(Intent.EXTRA_TITLE, "Select Photo or Open Camera");
+
+                                if (takePictureIntent != null) {
+                                    chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{takePictureIntent});
+                                }
+
+                                try {
+                                    startActivityForResult(chooserIntent, FILE_CHOOSER_REQ_CODE);
+                                    return true;
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Failed launching chooser: " + e.getMessage(), e);
+                                    if (mFilePathCallback != null) {
+                                        mFilePathCallback.onReceiveValue(null);
+                                        mFilePathCallback = null;
+                                    }
+                                    return false;
+                                }
+                            }
+                        });
+                        isWebChromeClientAttached = true;
+                        Log.d(TAG, "Virgo WebChromeClient successfully attached to WebView");
                     }
 
                     webView.addJavascriptInterface(new Object() {
@@ -156,7 +318,7 @@ public class MainActivity extends BridgeActivity {
 
                         @JavascriptInterface
                         public void requestPermission() {
-                            runOnUiThread(() -> requestNotificationPermission());
+                            runOnUiThread(() -> requestAppPermissions());
                         }
 
                         @JavascriptInterface
@@ -212,6 +374,11 @@ public class MainActivity extends BridgeActivity {
                         @JavascriptInterface
                         public boolean isForeground() {
                             return isAppInForeground;
+                        }
+
+                        @JavascriptInterface
+                        public boolean hasCameraHardware() {
+                            return getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY);
                         }
 
                         @JavascriptInterface
@@ -310,10 +477,35 @@ public class MainActivity extends BridgeActivity {
         });
     }
 
-    private void requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, PERMISSION_REQ_CODE);
+    private void requestAppPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            List<String> list = new ArrayList<>();
+            if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                list.add(Manifest.permission.CAMERA);
+            }
+            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                list.add(Manifest.permission.RECORD_AUDIO);
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    list.add(Manifest.permission.POST_NOTIFICATIONS);
+                }
+                if (checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+                    list.add(Manifest.permission.READ_MEDIA_IMAGES);
+                }
+                if (checkSelfPermission(Manifest.permission.READ_MEDIA_VIDEO) != PackageManager.PERMISSION_GRANTED) {
+                    list.add(Manifest.permission.READ_MEDIA_VIDEO);
+                }
+                if (checkSelfPermission(Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                    list.add(Manifest.permission.READ_MEDIA_AUDIO);
+                }
+            } else {
+                if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    list.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+                }
+            }
+            if (!list.isEmpty()) {
+                requestPermissions(list.toArray(new String[0]), PERMISSION_REQ_CODE);
             }
         }
     }
@@ -321,12 +513,10 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQ_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "POST_NOTIFICATIONS permission granted by user");
-                createNotificationChannel();
-                startVirgoBackgroundService();
-            }
+        if (requestCode == PERMISSION_REQ_CODE || requestCode == CAMERA_PERMISSION_REQ_CODE) {
+            Log.d(TAG, "Permission result received for request code: " + requestCode);
+            createNotificationChannel();
+            startVirgoBackgroundService();
         }
     }
 
