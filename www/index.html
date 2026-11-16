@@ -771,14 +771,14 @@
     .emoji-pill:hover { background: var(--bg-card); }
 
     /* PROFILE DRAWER */
-    /* PROFESSIONAL CELESTIAL PROFILE & ACCOUNT DRAWER */
+    /* PROFESSIONAL CELESTIAL PROFILE & SETTINGS DRAWER */
     #profile-drawer {
       position: absolute;
       top: 0;
       left: -100%;
       width: 100%;
       height: 100%;
-      background: radial-gradient(circle at 50% 0%, #0d1726 0%, #080e1a 60%, #04070d 100%);
+      background: radial-gradient(circle at 50% 8%, rgba(245, 197, 66, 0.09) 0%, rgba(13, 22, 38, 0.5) 30%, #070a12 75%);
       transition: left 0.32s cubic-bezier(0.16, 1, 0.3, 1);
       z-index: 60;
       display: flex;
@@ -786,264 +786,348 @@
       box-shadow: 10px 0 30px rgba(0,0,0,0.7);
     }
     #profile-drawer.open { left: 0; }
+    
     .drawer-topbar {
-      height: 64px;
-      background: rgba(13, 20, 32, 0.88);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border-bottom: 1px solid var(--border-subtle);
+      height: 56px;
+      background: rgba(10, 16, 26, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       display: flex;
       align-items: center;
-      padding: 0 18px;
-      gap: 14px;
+      justify-content: space-between;
+      padding: 0 16px;
       color: #fff;
       flex-shrink: 0;
-    }
-    .drawer-header-title { display: flex; flex-direction: column; gap: 2px; }
-    .drawer-header-main { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: 0.3px; }
-    .drawer-header-sub { font-size: 11px; color: var(--virgo-gold-bright); font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; }
-    
-    .drawer-scroll-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px 16px 36px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    /* HERO CARD */
-    .profile-hero-card {
-      position: relative;
-      background: rgba(16, 25, 41, 0.7);
-      border: 1px solid rgba(245, 197, 66, 0.3);
-      border-radius: 20px;
-      padding: 24px 18px 20px 18px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
-      overflow: hidden;
-    }
-    .profile-cover-art {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 68px;
-      background: radial-gradient(circle at 50% 0%, rgba(245, 197, 66, 0.25) 0%, rgba(13, 23, 42, 0.6) 70%, transparent 100%);
-      pointer-events: none;
-    }
-    .avatar-picker-wrap {
-      position: relative;
-      width: 108px;
-      height: 108px;
-      margin-top: 8px;
-      margin-bottom: 12px;
       z-index: 2;
     }
-    #drawer-avatar-img {
-      width: 108px;
-      height: 108px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 3px solid var(--virgo-gold);
-      box-shadow: 0 0 24px var(--virgo-gold-glow);
-      background: #080e18;
-    }
-    .avatar-online-badge {
-      position: absolute;
-      bottom: 6px;
-      left: 6px;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #10b981;
-      border: 2.5px solid #0d1726;
-      box-shadow: 0 0 8px #10b981;
-    }
-    .avatar-camera-btn {
-      position: absolute;
-      bottom: 2px;
-      right: 2px;
-      background: linear-gradient(135deg, var(--virgo-gold-bright), #b8860b);
-      width: 34px;
-      height: 34px;
+    .drawer-back-btn {
+      background: none;
+      border: none;
+      color: #e2e8f0;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      border: 2.5px solid #0d1726;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      transition: background 0.18s;
+      padding: 0;
+    }
+    .drawer-back-btn:hover { background: rgba(255, 255, 255, 0.08); }
+    .drawer-back-btn svg { width: 22px; height: 22px; fill: currentColor; }
+    .drawer-header-center { flex: 1; text-align: center; }
+    .drawer-header-main { font-size: 16.5px; font-weight: 700; color: #fff; letter-spacing: -0.2px; }
+    .drawer-header-action {
+      background: none;
+      border: none;
+      color: var(--virgo-gold-bright);
+      font-size: 14.5px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 8px;
+      transition: background 0.18s;
+    }
+    .drawer-header-action:hover { background: rgba(245, 197, 66, 0.12); }
+    
+    .drawer-scroll-body {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 10px 16px 40px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .drawer-scroll-body > * {
+      flex-shrink: 0; /* Prevents any flex collapsing */
+    }
+
+    /* SEAMLESS HERO SECTION */
+    .profile-hero-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 12px 10px 4px 10px;
+      position: relative;
+    }
+    .profile-avatar-wrap {
+      position: relative;
+      width: 98px;
+      height: 98px;
+      margin-bottom: 8px;
+    }
+    #drawer-avatar-img {
+      width: 98px;
+      height: 98px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid rgba(245, 197, 66, 0.9);
+      box-shadow: 0 0 28px rgba(245, 197, 66, 0.35), 0 8px 24px rgba(0,0,0,0.6);
+      background: #090e1a;
+      display: block;
+    }
+    .avatar-online-badge {
+      position: absolute;
+      bottom: 4px;
+      left: 4px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #10b981;
+      border: 2.5px solid #070a12;
+      box-shadow: 0 0 8px #10b981;
+    }
+    .avatar-camera-btn {
+      position: absolute;
+      bottom: 0px;
+      right: 0px;
+      background: linear-gradient(135deg, var(--virgo-gold-bright), #b8860b);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: 2.5px solid #070a12;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.5);
       transition: transform 0.2s;
     }
     .avatar-camera-btn:hover { transform: scale(1.1); }
-    .avatar-camera-btn svg { width: 16px; height: 16px; fill: #06090e; }
+    .avatar-camera-btn svg { width: 15px; height: 15px; fill: #06090e; }
+    
+    .btn-change-photo-text {
+      background: none;
+      border: none;
+      color: var(--virgo-gold-bright);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 10px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .btn-change-photo-text:hover { background: rgba(245, 197, 66, 0.1); }
 
     .profile-hero-name {
-      font-size: 19px;
+      font-size: 21px;
       font-weight: 700;
       color: #fff;
       margin: 0 0 6px 0;
-      letter-spacing: 0.2px;
+      letter-spacing: -0.2px;
     }
-    .verified-badge-pill {
+    .profile-handle-pill {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      background: rgba(245, 197, 66, 0.12);
-      border: 1px solid rgba(245, 197, 66, 0.35);
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.09);
       border-radius: 20px;
-      padding: 3px 10px;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--virgo-gold-bright);
-      margin-bottom: 12px;
-    }
-    .profile-id-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 6px 14px;
-      font-size: 12.5px;
-      color: var(--text-muted);
+      padding: 5px 13px;
+      font-size: 12px;
+      color: #94a3b8;
       cursor: pointer;
       transition: all 0.2s;
     }
-    .profile-id-chip:hover {
-      background: rgba(245, 197, 66, 0.1);
-      border-color: var(--virgo-gold);
+    .profile-handle-pill:hover {
+      background: rgba(245, 197, 66, 0.12);
+      border-color: rgba(245, 197, 66, 0.4);
       color: #fff;
     }
-    .profile-id-chip .copy-icon { opacity: 0.7; }
-    .profile-id-chip:hover .copy-icon { opacity: 1; fill: var(--virgo-gold-bright); }
+    .handle-at { color: var(--virgo-gold-bright); font-weight: 700; }
+    .handle-badge {
+      font-size: 10.5px;
+      font-weight: 700;
+      background: rgba(245, 197, 66, 0.15);
+      color: var(--virgo-gold-bright);
+      padding: 2px 7px;
+      border-radius: 10px;
+      margin-left: 2px;
+    }
+    .handle-copy-svg { opacity: 0.6; fill: currentColor; }
+    .profile-handle-pill:hover .handle-copy-svg { opacity: 1; fill: var(--virgo-gold-bright); }
 
-    /* SECTION CARDS */
-    .profile-section-card {
-      background: rgba(14, 21, 35, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 18px;
-      padding: 16px;
+    /* GROUPED INSET SETTINGS */
+    .settings-group {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 6px;
     }
-    .section-card-header {
+    .settings-group-header {
+      font-size: 11.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: #64748b;
+      padding-left: 12px;
+    }
+    .settings-card {
+      background: rgba(16, 24, 39, 0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+    .settings-row {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 12.5px;
-      font-weight: 700;
-      color: var(--virgo-gold-bright);
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      justify-content: space-between;
+      padding: 13px 15px;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      transition: background 0.15s;
     }
-    .field-group { width: 100%; display: flex; flex-direction: column; gap: 6px; }
-    .field-tag { font-size: 11.5px; font-weight: 600; color: #94a3b8; letter-spacing: 0.3px; }
-    .field-input-box {
-      background: rgba(8, 14, 24, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 12px;
-      padding: 11px 14px;
-      color: #fff;
-      font-size: 13.5px;
-      outline: none;
-      transition: all 0.2s;
+    .settings-row:last-child {
+      border-bottom: none;
     }
-    .field-input-box:focus {
-      border-color: var(--virgo-gold);
-      box-shadow: 0 0 10px rgba(245, 197, 66, 0.2);
+    .settings-row.clickable {
+      cursor: pointer;
     }
-    .preset-status-chips {
+    .settings-row.clickable:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .settings-row.clickable:active {
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .row-leading {
       display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 4px;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
     }
-    .status-chip {
+    .row-icon-tile {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .icon-gold { background: rgba(245, 197, 66, 0.15); color: #f5c542; }
+    .icon-cyan { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+    .icon-green { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .icon-purple { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
+    .icon-blue { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+    .icon-orange { background: rgba(249, 115, 22, 0.15); color: #f97316; }
+    .icon-slate { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; }
+    .icon-red { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+    .row-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #94a3b8;
+      min-width: 50px;
+    }
+    .row-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .row-desc {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 1px;
+    }
+
+    .row-inline-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      text-align: right;
+      flex: 1;
+      padding: 4px 6px;
+      border-radius: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .row-inline-input::placeholder {
+      color: #475569;
+    }
+    .row-inline-input:focus {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--virgo-gold-bright);
+    }
+
+    .mood-carousel-wrap {
+      padding: 10px 14px 12px 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      background: rgba(0, 0, 0, 0.15);
+    }
+    .mood-carousel-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 7px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .mood-chips-scroll {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
+    }
+    .mood-chips-scroll::-webkit-scrollbar { display: none; }
+    .mood-chip {
+      flex-shrink: 0;
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 14px;
-      padding: 4px 10px;
+      border-radius: 16px;
+      padding: 5px 12px;
       font-size: 11.5px;
       color: #cbd5e1;
       cursor: pointer;
       transition: all 0.18s;
+      white-space: nowrap;
     }
-    .status-chip:hover {
+    .mood-chip:hover {
       background: rgba(245, 197, 66, 0.15);
       border-color: var(--virgo-gold);
       color: var(--virgo-gold-bright);
       transform: translateY(-1px);
     }
+    .mood-chip:active { transform: scale(0.96); }
 
-    /* SECURITY ROWS */
-    .security-status-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    }
-    .security-status-row:last-child { border-bottom: none; }
-    .security-info { display: flex; flex-direction: column; gap: 2px; }
-    .security-title { font-size: 13px; font-weight: 600; color: #fff; }
-    .security-sub { font-size: 11px; color: #64748b; }
-    .status-pill {
-      font-size: 10.5px;
+    .badge-emerald {
+      font-size: 11px;
       font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      padding: 3px 9px;
+      padding: 3px 10px;
       border-radius: 12px;
+      background: rgba(16, 185, 129, 0.14);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      white-space: nowrap;
     }
-    .status-pill.green { background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
-    .status-pill.gold { background: rgba(245, 197, 66, 0.12); color: var(--virgo-gold-bright); border: 1px solid rgba(245, 197, 66, 0.3); }
-
-    /* TOOL BUTTONS */
-    .profile-tool-btn {
-      width: 100%;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 14px;
-      padding: 12px 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      color: #e2e8f0;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-align: left;
+    .chevron-svg {
+      fill: #475569;
+      flex-shrink: 0;
+      transition: transform 0.2s, fill 0.2s;
     }
-    .profile-tool-btn:hover {
-      background: rgba(245, 197, 66, 0.08);
-      border-color: rgba(245, 197, 66, 0.3);
-      transform: translateY(-1px);
+    .settings-row.clickable:hover .chevron-svg {
+      fill: #cbd5e1;
+      transform: translateX(2px);
     }
-    .tool-btn-left { display: flex; align-items: center; gap: 12px; }
-    .tool-icon { font-size: 18px; }
-    .tool-title { font-size: 13px; font-weight: 600; color: #fff; }
-    .tool-sub { font-size: 11px; color: #64748b; }
 
     /* ACTIONS */
-    .profile-actions-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 4px;
-    }
     .btn-gold-save {
       width: 100%;
-      background: linear-gradient(135deg, var(--virgo-gold-bright), #b8860b);
+      background: linear-gradient(135deg, var(--virgo-gold-bright) 0%, #d4af37 50%, #b8860b 100%);
       color: #06090e;
-      font-size: 14px;
+      font-size: 14.5px;
       font-weight: 700;
       padding: 13px;
       border: none;
@@ -1053,51 +1137,11 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      box-shadow: 0 4px 18px var(--virgo-gold-glow);
+      box-shadow: 0 4px 18px rgba(245, 197, 66, 0.35);
       transition: all 0.2s;
     }
     .btn-gold-save:hover { transform: translateY(-1px); filter: brightness(1.06); }
-    .btn-switch-account {
-      width: 100%;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 14px;
-      color: #e2e8f0;
-      font-size: 13.5px;
-      font-weight: 600;
-      padding: 11px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all 0.2s;
-    }
-    .btn-switch-account:hover {
-      background: rgba(245, 197, 66, 0.1);
-      border-color: var(--virgo-gold);
-      color: var(--virgo-gold-bright);
-    }
-    .btn-red-logout {
-      width: 100%;
-      background: rgba(239, 68, 68, 0.08);
-      color: #ef4444;
-      font-size: 13.5px;
-      font-weight: 600;
-      padding: 11px;
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      border-radius: 14px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all 0.2s;
-    }
-    .btn-red-logout:hover {
-      background: rgba(239, 68, 68, 0.16);
-      border-color: #ef4444;
-    }
+    .btn-gold-save:active { transform: scale(0.99); }
 
     /* TOAST */
     .virgo-toast {
@@ -2270,7 +2314,7 @@
       </div>
 
       <div class="ota-version-tag">
-        <span class="ota-version-pill" id="ota-modal-version-text">Version v2.8.7</span>
+        <span class="ota-version-pill" id="ota-modal-version-text">Version v2.8.8</span>
         <span class="ota-ready-badge">✦ Ready to Update</span>
       </div>
 
@@ -2480,24 +2524,25 @@
       </div>
     </div>
 
-    <!-- LUXURY CELESTIAL PROFILE & ACCOUNT DRAWER -->
+    <!-- EXECUTIVE CELESTIAL PROFILE & SETTINGS DRAWER -->
     <div id="profile-drawer">
       <!-- HEADER TOPBAR -->
       <div class="drawer-topbar">
-        <button class="action-icon-btn" onclick="toggleProfileDrawer(false)" title="Close">
+        <button class="drawer-back-btn" onclick="toggleProfileDrawer(false)" title="Back">
           <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
         </button>
-        <div class="drawer-header-title">
-          <div class="drawer-header-main">Profile &amp; Account</div>
-          <div class="drawer-header-sub">Virgo Celestial Identity</div>
+        <div class="drawer-header-center">
+          <div class="drawer-header-main">Profile &amp; Settings</div>
         </div>
+        <button class="drawer-header-action" onclick="saveProfileChanges()" title="Save Profile">
+          Save
+        </button>
       </div>
 
       <div class="drawer-scroll-body">
-        <!-- HERO IDENTITY CARD -->
-        <div class="profile-hero-card">
-          <div class="profile-cover-art"></div>
-          <div class="avatar-picker-wrap">
+        <!-- SEAMLESS HERO SECTION -->
+        <div class="profile-hero-section">
+          <div class="profile-avatar-wrap">
             <img id="drawer-avatar-img" src="icon.png?v=celestial" alt="Avatar">
             <div class="avatar-online-badge" title="Active &amp; Online"></div>
             <button type="button" class="avatar-camera-btn" onclick="document.getElementById('profile-pic-uploader').click()" title="Change Profile Photo">
@@ -2506,126 +2551,149 @@
             <input type="file" id="profile-pic-uploader" style="display:none;" accept="image/*" onchange="uploadProfilePhoto(event)">
           </div>
 
-          <h3 id="hero-display-name" class="profile-hero-name">Celestial User</h3>
-          <div class="verified-badge-pill">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--virgo-gold)"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-            <span>Verified Celestial Account</span>
-          </div>
-
-          <div class="profile-id-chip" onclick="copyUserIdToClipboard()" title="Click to copy User ID">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-            <span id="lbl-profile-id">guest@virgo</span>
-            <svg class="copy-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-          </div>
-        </div>
-
-        <!-- SECTION: PERSONAL INFORMATION -->
-        <div class="profile-section-card">
-          <div class="section-card-header">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--virgo-gold)"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-            <span>Personal Information</span>
-          </div>
-
-          <div class="field-group">
-            <label class="field-tag">Display Name</label>
-            <input class="field-input-box" id="inp-profile-name" type="text" placeholder="Your name..." oninput="updateHeroNameLive(this.value)">
-          </div>
-
-          <div class="field-group">
-            <label class="field-tag">Status / Bio Quote</label>
-            <input class="field-input-box" id="inp-profile-about" type="text" placeholder="In the stars / Available">
-            <div class="preset-status-chips">
-              <button type="button" class="status-chip" onclick="setStatusPreset('⚡ Available')">⚡ Available</button>
-              <button type="button" class="status-chip" onclick="setStatusPreset('🔒 Encrypted')">🔒 Encrypted</button>
-              <button type="button" class="status-chip" onclick="setStatusPreset('🌙 In the Stars')">🌙 In the Stars</button>
-              <button type="button" class="status-chip" onclick="setStatusPreset('🪐 Exploring')">🪐 Exploring</button>
-              <button type="button" class="status-chip" onclick="setStatusPreset('💼 Busy')">💼 Busy</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- SECTION: PRIVACY & SECURITY -->
-        <div class="profile-section-card">
-          <div class="section-card-header">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--virgo-gold)"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
-            <span>Security &amp; Encryption</span>
-          </div>
-
-          <div class="security-status-row">
-            <div class="security-info">
-              <div class="security-title">End-to-End Encryption</div>
-              <div class="security-sub">WebCrypto ECDH-P256 &amp; AES-GCM 256-bit</div>
-            </div>
-            <span class="status-pill green">Active</span>
-          </div>
-
-          <div class="security-status-row">
-            <div class="security-info">
-              <div class="security-title">Session Persistence</div>
-              <div class="security-sub">Auto-login enabled across app restarts</div>
-            </div>
-            <span class="status-pill green">Saved</span>
-          </div>
-
-          <div class="security-status-row" style="align-items:center;">
-            <div class="security-info">
-              <div class="security-title">Client Version</div>
-              <div class="security-sub" id="lbl-drawer-version-sub">Virgo Messenger v2.8.7 (Celestial OTA)</div>
-            </div>
-            <button type="button" class="btn-check-updates" onclick="manualCheckForUpdates()" title="Check for instant updates">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
-              <span>Check Updates</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- SECTION: STORAGE & NOTIFICATIONS -->
-        <div class="profile-section-card">
-          <div class="section-card-header">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--virgo-gold)"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
-            <span>Storage &amp; Notifications</span>
-          </div>
-
-          <button type="button" class="profile-tool-btn" onclick="openStorageModal()">
-            <div class="tool-btn-left">
-              <span class="tool-icon">💾</span>
-              <div>
-                <div class="tool-title">Storage &amp; Local Database</div>
-                <div class="tool-sub">Inspect local chats, clear cache &amp; media</div>
-              </div>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+          <button type="button" class="btn-change-photo-text" onclick="document.getElementById('profile-pic-uploader').click()">
+            Change Profile Photo
           </button>
 
-          <button type="button" class="profile-tool-btn" onclick="testDeviceNotification()">
-            <div class="tool-btn-left">
-              <span class="tool-icon">🔔</span>
-              <div>
-                <div class="tool-title">Test Notifications</div>
-                <div class="tool-sub">Check sound, ringtone &amp; vibration alerts</div>
-              </div>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
-          </button>
+          <h2 id="hero-display-name" class="profile-hero-name">Celestial User</h2>
+
+          <div class="profile-handle-pill" onclick="copyUserIdToClipboard()" title="Click to copy ID">
+            <span class="handle-at">@</span><span id="lbl-profile-id">guest@virgo</span>
+            <span class="handle-badge">✦ Verified</span>
+            <svg class="handle-copy-svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+          </div>
         </div>
 
-        <!-- SAVE & LOGOUT ACTIONS -->
-        <div class="profile-actions-wrap">
+        <!-- GROUP: PERSONAL INFO -->
+        <div class="settings-group">
+          <div class="settings-group-header">Personal Information</div>
+          <div class="settings-card">
+            <div class="settings-row">
+              <div class="row-leading">
+                <div class="row-icon-tile icon-gold">👤</div>
+                <span class="row-label">Name</span>
+              </div>
+              <input class="row-inline-input" id="inp-profile-name" type="text" placeholder="Your display name..." oninput="updateHeroNameLive(this.value)">
+            </div>
+
+            <div class="settings-row">
+              <div class="row-leading">
+                <div class="row-icon-tile icon-cyan">💬</div>
+                <span class="row-label">Bio</span>
+              </div>
+              <input class="row-inline-input" id="inp-profile-about" type="text" placeholder="In the stars / Available">
+            </div>
+
+            <div class="mood-carousel-wrap">
+              <div class="mood-carousel-label">Quick Status Mood</div>
+              <div class="mood-chips-scroll">
+                <button type="button" class="mood-chip" onclick="setStatusPreset('⚡ Available')">⚡ Available</button>
+                <button type="button" class="mood-chip" onclick="setStatusPreset('🌙 In the Stars')">🌙 In the Stars</button>
+                <button type="button" class="mood-chip" onclick="setStatusPreset('🔒 Encrypted')">🔒 Encrypted</button>
+                <button type="button" class="mood-chip" onclick="setStatusPreset('🪐 Exploring')">🪐 Exploring</button>
+                <button type="button" class="mood-chip" onclick="setStatusPreset('💼 In a Meeting')">💼 In a Meeting</button>
+                <button type="button" class="mood-chip" onclick="setStatusPreset('☕ Coffee Break')">☕ Coffee Break</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GROUP: SECURITY & APP HEALTH -->
+        <div class="settings-group">
+          <div class="settings-group-header">Security &amp; Build</div>
+          <div class="settings-card">
+            <div class="settings-row">
+              <div class="row-leading">
+                <div class="row-icon-tile icon-green">🛡️</div>
+                <div>
+                  <div class="row-title">End-to-End Encryption</div>
+                  <div class="row-desc">WebCrypto ECDH-P256 &amp; AES-GCM</div>
+                </div>
+              </div>
+              <span class="badge-emerald">Active ✓</span>
+            </div>
+
+            <div class="settings-row">
+              <div class="row-leading">
+                <div class="row-icon-tile icon-purple">🔑</div>
+                <div>
+                  <div class="row-title">Session Persistence</div>
+                  <div class="row-desc">Auto-login active across app restarts</div>
+                </div>
+              </div>
+              <span class="badge-emerald">Protected</span>
+            </div>
+
+            <div class="settings-row">
+              <div class="row-leading">
+                <div class="row-icon-tile icon-gold">⚡</div>
+                <div>
+                  <div class="row-title">Virgo Messenger</div>
+                  <div class="row-desc" id="lbl-drawer-version-sub">v2.8.8 (Instant OTA)</div>
+                </div>
+              </div>
+              <button type="button" class="btn-check-updates" onclick="manualCheckForUpdates()" title="Check for instant updates">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+                <span>Check</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- GROUP: DATA & DIAGNOSTICS -->
+        <div class="settings-group">
+          <div class="settings-group-header">Data &amp; Diagnostics</div>
+          <div class="settings-card">
+            <div class="settings-row clickable" onclick="openStorageModal()">
+              <div class="row-leading">
+                <div class="row-icon-tile icon-blue">💾</div>
+                <div>
+                  <div class="row-title">Encrypted Storage Vault</div>
+                  <div class="row-desc">Inspect local cache &amp; database</div>
+                </div>
+              </div>
+              <svg class="chevron-svg" width="16" height="16" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+            </div>
+
+            <div class="settings-row clickable" onclick="testDeviceNotification()">
+              <div class="row-leading">
+                <div class="row-icon-tile icon-orange">🔔</div>
+                <div>
+                  <div class="row-title">Test Notifications</div>
+                  <div class="row-desc">Sound, ringtone &amp; vibration alerts</div>
+                </div>
+              </div>
+              <svg class="chevron-svg" width="16" height="16" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- GROUP: ACCOUNT ACTIONS -->
+        <div class="settings-group">
           <button type="button" class="btn-gold-save" id="btn-save-profile" onclick="saveProfileChanges()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
             <span>Save Profile Changes</span>
           </button>
 
-          <button type="button" class="btn-switch-account" onclick="showAuthPage()">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
-            <span>Switch Account / Sign In</span>
-          </button>
+          <div class="settings-card" style="margin-top: 10px;">
+            <div class="settings-row clickable" onclick="showAuthPage()">
+              <div class="row-leading">
+                <div class="row-icon-tile icon-slate">🔄</div>
+                <span class="row-title" style="color: #cbd5e1;">Switch Account / Sign In</span>
+              </div>
+              <svg class="chevron-svg" width="16" height="16" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+            </div>
 
-          <button type="button" class="btn-red-logout" onclick="logout()">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
-            <span>Log Out</span>
-          </button>
+            <div class="settings-row clickable" onclick="logout()">
+              <div class="row-leading">
+                <div class="row-icon-tile icon-red">🚪</div>
+                <span class="row-title" style="color: #ef4444; font-weight: 600;">Log Out</span>
+              </div>
+              <svg class="chevron-svg" width="16" height="16" viewBox="0 0 24 24" fill="#ef4444"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+            </div>
+          </div>
         </div>
+
       </div>
     </div>
   </div>
