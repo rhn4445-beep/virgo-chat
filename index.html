@@ -1870,22 +1870,21 @@
   <!-- DEDICATED FULL-PAGE AUTHENTICATION SCREEN -->
   <div id="auth-page">
     <div class="auth-card">
-      <div class="auth-brand">
+      <div class="auth-brand" style="margin-bottom:20px;">
         <div class="auth-logo-halo">
           <img src="icon.png" alt="Virgo" class="auth-logo-img">
         </div>
-        <h1 class="auth-brand-name">Virgo Messenger</h1>
-        <span class="auth-brand-pill">✦ CELESTIAL SPEED • END-TO-END ENCRYPTED ✦</span>
-        <p class="auth-brand-desc">Sign in with your Gmail, Mobile Number, or Custom ID to access your private encrypted chats and media vault.</p>
+        <h1 class="auth-brand-name" style="margin-bottom:4px;">Virgo Messenger</h1>
+        <p class="auth-brand-desc" style="margin:0;font-size:13px;color:var(--text-muted);">Celestial Speed &bull; End-to-End Encrypted</p>
       </div>
 
       <!-- AUTH TABS -->
-      <div class="auth-tabs">
+      <div class="auth-tabs" style="margin-bottom:20px;">
         <button type="button" class="auth-tab-btn active" id="tab-btn-gmail" onclick="switchAuthTab('gmail')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
             <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
           </svg>
-          <span>Email OTP</span>
+          <span>Email</span>
         </button>
         <button type="button" class="auth-tab-btn" id="tab-btn-phone" onclick="switchAuthTab('phone')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -1903,49 +1902,33 @@
 
       <!-- PANEL 1: EMAIL OTP -->
       <div class="auth-panel" id="auth-panel-gmail">
-        <!-- STEP 1: Request Code -->
-        <div id="otp-step-1" style="width:100%;display:flex;flex-direction:column;gap:12px;">
-          <div style="text-align:center;margin-bottom:2px;">
-            <div style="font-size:14px;font-weight:600;color:#fff;">Sign in with Email OTP</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Enter your email to receive a secure 6-digit verification code.</div>
-          </div>
-
-          <label class="auth-field-label" style="margin-bottom:0;">Email Address</label>
+        <!-- STEP 1: Enter Email -->
+        <div id="otp-step-1" style="width:100%;display:flex;flex-direction:column;gap:14px;">
           <div class="auth-input-wrap">
             <svg class="auth-input-icon" viewBox="0 0 24 24" fill="var(--virgo-gold)">
               <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
             </svg>
-            <input type="email" id="auth-otp-email" class="auth-text-input" placeholder="e.g. rhn4445@gmail.com" value="rhn4445@gmail.com" onkeydown="if(event.key==='Enter')sendEmailOTP()">
-          </div>
-
-          <div class="auth-pills-row">
-            <span style="font-size:10.5px;color:var(--text-muted);">Quick fill:</span>
-            <button type="button" class="auth-pill-chip" onclick="quickFillOtpEmail('rhn4445@gmail.com')">rhn4445@gmail.com</button>
-            <button type="button" class="auth-pill-chip" onclick="quickAppendOtpDomain()">+ @gmail.com</button>
+            <input type="email" id="auth-otp-email" class="auth-text-input" placeholder="Enter your email" onkeydown="if(event.key==='Enter')sendEmailOTP()">
           </div>
 
           <button type="button" id="btn-send-otp" class="auth-submit-btn" onclick="sendEmailOTP()">
-            <span>Send 6-Digit Code</span>
+            <span>Send Verification Code</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>
           </button>
         </div>
 
         <!-- STEP 2: Enter 6-digit Code -->
-        <div id="otp-step-2" style="width:100%;display:none;flex-direction:column;gap:12px;">
-          <div style="text-align:center;margin-bottom:2px;">
-            <div style="font-size:14px;font-weight:600;color:#fff;">Enter Verification Code</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Code sent to <span id="otp-target-display" style="color:var(--virgo-gold);font-weight:600;"></span></div>
+        <div id="otp-step-2" style="width:100%;display:none;flex-direction:column;gap:14px;">
+          <div style="text-align:center;">
+            <div style="font-size:15px;font-weight:600;color:#fff;">Enter Verification Code</div>
+            <div style="font-size:12.5px;color:var(--text-muted);margin-top:4px;">Sent to <span id="otp-target-display" style="color:var(--virgo-gold);font-weight:600;"></span></div>
           </div>
 
-          <label class="auth-field-label" style="margin-bottom:0;">6-Digit Code</label>
           <div class="auth-input-wrap">
-            <svg class="auth-input-icon" viewBox="0 0 24 24" fill="var(--virgo-gold)">
-              <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
-            </svg>
             <input type="text" id="auth-otp-code" class="auth-text-input" placeholder="• • • • • •" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" style="letter-spacing:10px;font-size:22px;text-align:center;font-weight:700;" onkeydown="if(event.key==='Enter')verifyEmailOTP()">
           </div>
 
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 4px;font-size:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;font-size:12px;">
             <span id="otp-timer-text" style="color:var(--text-muted);">Resend in <b id="otp-countdown" style="color:var(--virgo-gold);">30</b>s</span>
             <button type="button" id="btn-resend-otp" onclick="resendEmailOTP()" style="display:none;background:none;border:none;color:var(--virgo-gold);cursor:pointer;font-weight:600;font-size:12px;padding:0;">Resend Code</button>
             <button type="button" onclick="backToEmailStep()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:0;text-decoration:underline;">← Change Email</button>
@@ -1958,29 +1941,28 @@
         </div>
 
         <!-- Notification / Error Box -->
-        <div id="otp-status-msg" style="display:none;width:100%;border-radius:10px;padding:10px 14px;font-size:12px;line-height:1.4;text-align:center;margin-top:4px;"></div>
+        <div id="otp-status-msg" style="display:none;width:100%;border-radius:10px;padding:10px 14px;font-size:12px;line-height:1.4;text-align:center;margin-top:6px;"></div>
       </div>
 
       <!-- PANEL 2: PHONE NUMBER -->
       <div class="auth-panel" id="auth-panel-phone" style="display:none;">
-        <label class="auth-field-label">Mobile Phone Number</label>
         <div style="display:flex;gap:8px;width:100%;">
           <select id="auth-country-select" class="auth-select-country">
-            <option value="+91" selected>🇮🇳 +91 (India)</option>
-            <option value="+1">🇺🇸 +1 (USA)</option>
-            <option value="+44">🇬🇧 +44 (UK)</option>
-            <option value="+971">🇦🇪 +971 (UAE)</option>
-            <option value="+61">🇦🇺 +61 (Australia)</option>
-            <option value="+49">🇩🇪 +49 (Germany)</option>
-            <option value="+33">🇫🇷 +33 (France)</option>
-            <option value="+81">🇯🇵 +81 (Japan)</option>
+            <option value="+91" selected>🇮🇳 +91</option>
+            <option value="+1">🇺🇸 +1</option>
+            <option value="+44">🇬🇧 +44</option>
+            <option value="+971">🇦🇪 +971</option>
+            <option value="+61">🇦🇺 +61</option>
+            <option value="+49">🇩🇪 +49</option>
+            <option value="+33">🇫🇷 +33</option>
+            <option value="+81">🇯🇵 +81</option>
             <option value="">Other</option>
           </select>
           <div class="auth-input-wrap" style="flex:1;">
             <svg class="auth-input-icon" viewBox="0 0 24 24" fill="var(--virgo-gold)">
               <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
             </svg>
-            <input type="tel" id="auth-inp-phone" class="auth-text-input" placeholder="e.g. 7861941270" onkeydown="if(event.key==='Enter')submitAuthPhone()">
+            <input type="tel" id="auth-inp-phone" class="auth-text-input" placeholder="Phone number" onkeydown="if(event.key==='Enter')submitAuthPhone()">
           </div>
         </div>
         <button type="button" class="auth-submit-btn" onclick="submitAuthPhone()">
@@ -1991,12 +1973,11 @@
 
       <!-- PANEL 3: USERNAME / ID -->
       <div class="auth-panel" id="auth-panel-custom" style="display:none;">
-        <label class="auth-field-label">Decentralized User ID / Handle</label>
         <div class="auth-input-wrap">
           <svg class="auth-input-icon" viewBox="0 0 24 24" fill="var(--virgo-gold)">
             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
           </svg>
-          <input type="text" id="auth-inp-custom" class="auth-text-input" placeholder="e.g. starlight_virgo" onkeydown="if(event.key==='Enter')submitAuthCustom()">
+          <input type="text" id="auth-inp-custom" class="auth-text-input" placeholder="Enter username or ID" onkeydown="if(event.key==='Enter')submitAuthCustom()">
         </div>
         <button type="button" class="auth-submit-btn" onclick="submitAuthCustom()">
           <span>Enter Virgo</span>
@@ -2004,11 +1985,11 @@
         </button>
       </div>
 
-      <div class="auth-security-badge">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--virgo-gold)">
+      <div class="auth-security-badge" style="margin-top:16px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--virgo-gold)">
           <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
         </svg>
-        <span>End-to-End Encrypted with WebCrypto ECDH-P256 &amp; AES-GCM</span>
+        <span>End-to-End Encrypted</span>
       </div>
     </div>
   </div>
