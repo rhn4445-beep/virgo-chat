@@ -61,6 +61,40 @@ public class MainActivity extends BridgeActivity {
         requestAppPermissions();
         startVirgoBackgroundService();
         syncUserIdFromWebView();
+        handleIncomingIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIncomingIntent(intent);
+    }
+
+    private void handleIncomingIntent(Intent intent) {
+        if (intent == null) return;
+        try {
+            String openUser = intent.getStringExtra("open_chat_user");
+            int notifId = intent.getIntExtra("notif_id", -1);
+            String notifTag = intent.getStringExtra("notif_tag");
+            if (notifId != -1) {
+                NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                if (nm != null) {
+                    if (notifTag != null) nm.cancel(notifTag, notifId);
+                    nm.cancel(notifId);
+                }
+            }
+            if (openUser != null && !openUser.trim().isEmpty()) {
+                currentOpenChat = openUser.trim().toLowerCase();
+                NotificationHelper.cancelNotificationsForSender(this, currentOpenChat);
+                if (bridge != null && bridge.getWebView() != null) {
+                    String safeUser = openUser.replace("'", "\\'");
+                    bridge.getWebView().evaluateJavascript("if (typeof selectContact === 'function') selectContact('" + safeUser + "');", null);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error in handleIncomingIntent: " + e.getMessage());
+        }
     }
 
     @Override
@@ -80,6 +114,7 @@ public class MainActivity extends BridgeActivity {
         if (currentOpenChat != null && !currentOpenChat.trim().isEmpty()) {
             NotificationHelper.cancelNotificationsForSender(this, currentOpenChat);
         }
+        handleIncomingIntent(getIntent());
         setupWebViewAndBridge();
         requestAppPermissions();
         startVirgoBackgroundService();

@@ -35,7 +35,7 @@ import java.net.URLEncoder;
 
 public class VirgoForegroundService extends Service {
     private static final String TAG = "VirgoService";
-    private static final String SERVICE_CHANNEL_ID = "virgo_background_channel";
+    private static final String SERVICE_CHANNEL_ID = "virgo_background_sync_v2";
     private static final String MSG_CHANNEL_ID = "virgo_chat_messages";
     private static final int SERVICE_NOTIFICATION_ID = 2001;
 
@@ -60,16 +60,22 @@ public class VirgoForegroundService extends Service {
     private void createServiceNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
-                CharSequence name = "Virgo Background Service";
-                String description = "Keeps Virgo connected for real-time messages and notifications";
-                int importance = NotificationManager.IMPORTANCE_LOW;
-                NotificationChannel channel = new NotificationChannel(SERVICE_CHANNEL_ID, name, importance);
-                channel.setDescription(description);
-                channel.setShowBadge(false);
-                channel.setSound(null, null);
-
                 NotificationManager manager = getSystemService(NotificationManager.class);
                 if (manager != null) {
+                    try {
+                        manager.deleteNotificationChannel("virgo_background_channel");
+                    } catch (Exception ignored) {}
+
+                    CharSequence name = "Virgo Background Service";
+                    String description = "Keeps Virgo connected for real-time messages and notifications";
+                    int importance = NotificationManager.IMPORTANCE_MIN;
+                    NotificationChannel channel = new NotificationChannel(SERVICE_CHANNEL_ID, name, importance);
+                    channel.setDescription(description);
+                    channel.setShowBadge(false);
+                    channel.setSound(null, null);
+                    channel.enableVibration(false);
+                    channel.enableLights(false);
+
                     manager.createNotificationChannel(channel);
                 }
             } catch (Exception e) {
@@ -127,7 +133,8 @@ public class VirgoForegroundService extends Service {
                 .setSmallIcon(R.drawable.ic_stat_virgo)
                 .setColor(0xFFF5C542)
                 .setContentIntent(pendingIntent)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setPriority(NotificationCompat.PRIORITY_MIN)
+                .setShowWhen(false)
                 .setOngoing(true);
 
             android.graphics.Bitmap logo = NotificationHelper.getBitmapFromDrawable(this, R.mipmap.ic_launcher);
@@ -233,6 +240,9 @@ public class VirgoForegroundService extends Service {
         String s1 = id1.trim().toLowerCase();
         String s2 = id2.trim().toLowerCase();
         if (s1.equals(s2)) return true;
+        String u1 = s1.contains("@") ? s1.split("@")[0] : s1;
+        String u2 = s2.contains("@") ? s2.split("@")[0] : s2;
+        if (u1.equals(u2)) return true;
         String c1 = s1.replaceAll("[^0-9]", "");
         String c2 = s2.replaceAll("[^0-9]", "");
         if (c1.length() >= 10 && c2.length() >= 10) {

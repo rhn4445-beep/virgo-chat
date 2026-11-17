@@ -143,9 +143,24 @@ public class NotificationHelper {
 
             Intent intent = new Intent(context, MainActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            intent.putExtra("open_chat_user", sender);
+
+            // Determine deterministic ID per sender
+            String normSender = normalizeSenderKey(sender);
+            String rawSender = sender.trim().toLowerCase();
+            String prefixSender = rawSender.contains("@") ? rawSender.split("@")[0] : rawSender;
+            int senderNotifId = Math.abs(normSender.hashCode() % 100000000);
+            int notifId = (msgId != null && !msgId.trim().isEmpty())
+                ? Math.abs(msgId.hashCode() % 100000000)
+                : senderNotifId;
+
+            String senderTag = "msg_" + normSender;
+            intent.putExtra("notif_id", notifId);
+            intent.putExtra("notif_tag", senderTag);
+
             PendingIntent pendingIntent = PendingIntent.getActivity(
                 context,
-                0,
+                notifId,
                 intent,
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
             );
@@ -171,17 +186,12 @@ public class NotificationHelper {
 
             Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 
-            // Determine deterministic ID per sender
-            String normSender = normalizeSenderKey(sender);
-            int senderNotifId = Math.abs(normSender.hashCode() % 100000000);
-            int notifId = (msgId != null && !msgId.trim().isEmpty())
-                ? Math.abs(msgId.hashCode() % 100000000)
-                : senderNotifId;
-
             // Track IDs for this sender so they can be dismissed when the chat is opened
-            Set<Integer> idSet = activeSenderNotifications.computeIfAbsent(normSender, k -> Collections.newSetFromMap(new ConcurrentHashMap<>()));
-            idSet.add(notifId);
-            idSet.add(senderNotifId);
+            for (String key : new String[]{normSender, rawSender, prefixSender}) {
+                Set<Integer> idSet = activeSenderNotifications.computeIfAbsent(key, k -> Collections.newSetFromMap(new ConcurrentHashMap<>()));
+                idSet.add(notifId);
+                idSet.add(senderNotifId);
+            }
 
             NotificationCompat.Builder builder = new NotificationCompat.Builder(context, MSG_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_virgo)
@@ -208,8 +218,9 @@ public class NotificationHelper {
 
             NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (notificationManager != null) {
+                notificationManager.notify(senderTag, notifId, builder.build());
                 notificationManager.notify(notifId, builder.build());
-                Log.d(TAG, "✅ Posted notification [id=" + notifId + ", from=" + sender + "] with app logo");
+                Log.d(TAG, "✅ Posted notification [id=" + notifId + ", tag=" + senderTag + ", from=" + sender + "] with app logo");
             }
         } catch (Throwable t) {
             Log.e(TAG, "Error posting notification: " + t.getMessage(), t);
@@ -224,25 +235,72 @@ public class NotificationHelper {
 
             String norm = normalizeSenderKey(sender);
             String raw = sender.trim().toLowerCase();
+            String prefix = raw.contains("@") ? raw.split("@")[0] : raw;
 
-            // 1. Cancel deterministic sender IDs
-            nm.cancel(Math.abs(norm.hashCode() % 100000000));
-            nm.cancel(Math.abs(raw.hashCode() % 100000000));
+            // 1. Cancel deterministic sender IDs with and without tags
+            int idNorm = Math.abs(norm.hashCode() % 100000000);
+            int idRaw = Math.abs(raw.hashCode() % 100000000);
+            int idPrefix = Math.abs(prefix.hashCode() % 100000000);
+
+            nm.cancel(idNorm);
+            nm.cancel(idRaw);
+            nm.cancel(idPrefix);
+
+            nm.cancel("msg_" + norm, idNorm);
+            nm.cancel("msg_" + raw, idRaw);
+            nm.cancel("msg_" + prefix, idPrefix);
 
             // 2. Cancel all tracked message IDs for this sender
-            Set<Integer> ids = activeSenderNotifications.remove(norm);
-            if (ids != null) {
-                for (Integer id : ids) {
-                    if (id != null) nm.cancel(id);
+            for (String key : new String[]{norm, raw, prefix}) {
+                Set<Integer> ids = activeSenderNotifications.remove(key);
+                if (ids != null) {
+                    for (Integer id : ids) {
+                        if (id != null) {
+                            nm.cancel(id);
+                            nm.cancel("msg_" + key, id);
+                        }
+                    }
                 }
             }
-            Set<Integer> rawIds = activeSenderNotifications.remove(raw);
-            if (rawIds != null) {
-                for (Integer id : rawIds) {
-                    if (id != null) nm.cancel(id);
+
+            // 3. BULLETPROOF ACTIVE STATUS BAR SWEEP (API 23+)
+            // Inspect all real notifications currently sitting in the Android notification bar
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                StatusBarNotification[] active = nm.getActiveNotifications();
+                if (active != null) {
+                    for (StatusBarNotification sbn : active) {
+                        if (sbn.getId() == 2001) continue; // Keep background service running
+
+                        android.app.Notification notif = sbn.getNotification();
+                        if (notif == null) continue;
+
+                        CharSequence titleCs = notif.extras != null ? notif.extras.getCharSequence(android.app.Notification.EXTRA_TITLE) : null;
+                        String notifTitle = titleCs != null ? titleCs.toString().trim().toLowerCase() : "";
+                        String sbnTag = sbn.getTag() != null ? sbn.getTag().toLowerCase() : "";
+
+                        boolean matches = false;
+                        if (!notifTitle.isEmpty()) {
+                            String titlePrefix = notifTitle.contains("@") ? notifTitle.split("@")[0] : notifTitle;
+                            String normTitle = normalizeSenderKey(notifTitle);
+                            if (notifTitle.equals(raw) || notifTitle.equals(norm) || notifTitle.equals(prefix)
+                                || titlePrefix.equals(prefix) || normTitle.equals(norm)) {
+                                matches = true;
+                            }
+                        }
+                        if (!sbnTag.isEmpty()) {
+                            if (sbnTag.contains(raw) || sbnTag.contains(norm) || sbnTag.contains(prefix)) {
+                                matches = true;
+                            }
+                        }
+
+                        if (matches) {
+                            nm.cancel(sbn.getTag(), sbn.getId());
+                            Log.d(TAG, "🗑️ Active status bar sweep dismissed notification: id=" + sbn.getId() + ", tag=" + sbn.getTag() + ", title=" + notifTitle);
+                        }
+                    }
                 }
             }
-            Log.d(TAG, "🗑️ Dismissed all notifications in status bar for: " + sender);
+            Log.d(TAG, "🗑️ Dismissed all notifications in status bar for sender: " + sender);
         } catch (Throwable t) {
             Log.e(TAG, "Error cancelling notifications for sender: " + t.getMessage(), t);
         }
@@ -285,6 +343,7 @@ public class NotificationHelper {
                     for (StatusBarNotification sbn : active) {
                         // Do NOT cancel the persistent background service notification (ID 2001)
                         if (sbn.getId() != 2001) {
+                            nm.cancel(sbn.getTag(), sbn.getId());
                             nm.cancel(sbn.getId());
                         }
                     }

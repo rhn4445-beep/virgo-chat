@@ -3843,7 +3843,7 @@
     const isLocalDev = !isCapacitor && window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (window.location.port !== "");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = localStorage.getItem("virgo_active_client_version") || "v2.9.1";
+    let activeClientVersion = localStorage.getItem("virgo_active_client_version") || "v2.9.2";
     let updateBannerDismissed = false;
     let updateModalDismissed = false;
     let pendingNewVersion = "";
@@ -3852,7 +3852,11 @@
     window.onVirgoResume = function() {
       console.log("Virgo resumed from background");
       if (activeChatId && window.AndroidNative && typeof window.AndroidNative.clearNotificationsForContact === "function") {
-        try { window.AndroidNative.clearNotificationsForContact(activeChatId); } catch(e) {}
+        try {
+          window.AndroidNative.clearNotificationsForContact(activeChatId);
+          const prefix = activeChatId.includes("@") ? activeChatId.split("@")[0] : activeChatId;
+          if (prefix !== activeChatId) window.AndroidNative.clearNotificationsForContact(prefix);
+        } catch(e) {}
       }
       if (myId) {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -4302,6 +4306,7 @@
         } catch(e) {
           console.warn("AndroidNative error:", e);
         }
+        return; // Handled natively in Android APK - do not duplicate via Web/ServiceWorker notification
       }
 
       // 2. Audio Chime & Vibration
@@ -6555,6 +6560,10 @@
           }
           if (typeof window.AndroidNative.clearNotificationsForContact === "function") {
             window.AndroidNative.clearNotificationsForContact(activeChatId);
+            const prefix = activeChatId.includes("@") ? activeChatId.split("@")[0] : activeChatId;
+            if (prefix !== activeChatId) {
+              window.AndroidNative.clearNotificationsForContact(prefix);
+            }
           }
         }
 
@@ -7846,7 +7855,11 @@
         displayMessage(text, "received", safeMsgId, null, env.timestamp);
         if (window.AndroidNative) {
           if (typeof window.AndroidNative.vibrate === "function") window.AndroidNative.vibrate(150);
-          if (typeof window.AndroidNative.clearNotificationsForContact === "function") window.AndroidNative.clearNotificationsForContact(senderId);
+          if (typeof window.AndroidNative.clearNotificationsForContact === "function") {
+            window.AndroidNative.clearNotificationsForContact(senderId);
+            const prefix = senderId.includes("@") ? senderId.split("@")[0] : senderId;
+            if (prefix !== senderId) window.AndroidNative.clearNotificationsForContact(prefix);
+          }
         }
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
@@ -7951,7 +7964,11 @@
         displayMessage(displayUrl, "received", safeMsgId, mediaType, env.timestamp, null, fileName, fileSize);
         if (window.AndroidNative) {
           if (typeof window.AndroidNative.vibrate === "function") window.AndroidNative.vibrate(150);
-          if (typeof window.AndroidNative.clearNotificationsForContact === "function") window.AndroidNative.clearNotificationsForContact(senderId);
+          if (typeof window.AndroidNative.clearNotificationsForContact === "function") {
+            window.AndroidNative.clearNotificationsForContact(senderId);
+            const prefix = senderId.includes("@") ? senderId.split("@")[0] : senderId;
+            if (prefix !== senderId) window.AndroidNative.clearNotificationsForContact(prefix);
+          }
         }
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
