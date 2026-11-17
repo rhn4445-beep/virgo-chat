@@ -144,6 +144,7 @@
       flex-direction: column;
       flex-shrink: 0;
       position: relative;
+      overflow: hidden;
       z-index: 10;
     }
 
@@ -393,7 +394,7 @@
 
     /* FLOATING ACTION BUTTON (Mobile Only) */
     #fab-new-chat {
-      display: none !important;
+      display: none;
     }
     @media (min-width: 769px) {
       #fab-new-chat {
@@ -402,6 +403,9 @@
     }
     @media (max-width: 768px) {
       #fab-new-chat {
+        display: flex;
+        align-items: center;
+        justify-content: center;
         position: fixed;
         bottom: calc(75px + env(safe-area-inset-bottom, 0px));
         right: 20px;
@@ -2936,7 +2940,7 @@
     </div>
 
     <!-- FLOATING ACTION BUTTON -->
-    <button id="fab-new-chat" onclick="openNewChatModal()" title="Start New Chat" style="display: none !important;">
+    <button id="fab-new-chat" onclick="openNewChatModal()" title="Start New Chat">
       <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 10h-5v5h-2v-5H6v-2h5V5h2v5h5v2z"/></svg>
     </button>
 
@@ -3009,7 +3013,7 @@
                 <div class="row-icon-tile icon-gold">👤</div>
                 <span class="row-label">Name</span>
               </div>
-              <input class="row-inline-input" id="inp-profile-name" type="text" placeholder="Your display name..." oninput="updateHeroNameLive(this.value)">
+              <input class="row-inline-input" id="inp-profile-name" type="text" placeholder="Your display name..." oninput="updateHeroNameLive(this.value)" onblur="saveProfileChanges(true)">
             </div>
 
             <div class="settings-row">
@@ -3017,7 +3021,7 @@
                 <div class="row-icon-tile icon-cyan">💬</div>
                 <span class="row-label">Bio</span>
               </div>
-              <input class="row-inline-input" id="inp-profile-about" type="text" placeholder="In the stars / Available">
+              <input class="row-inline-input" id="inp-profile-about" type="text" placeholder="In the stars / Available" onblur="saveProfileChanges(true)">
             </div>
 
             <div class="mood-carousel-wrap">
@@ -3843,7 +3847,7 @@
     const isLocalDev = !isCapacitor && window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (window.location.port !== "");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = localStorage.getItem("virgo_active_client_version") || "v2.9.3";
+    let activeClientVersion = localStorage.getItem("virgo_active_client_version") || "v2.9.4";
     let updateBannerDismissed = false;
     let updateModalDismissed = false;
     let pendingNewVersion = "";
@@ -5027,6 +5031,7 @@
       const inp = document.getElementById("inp-profile-about");
       if (inp) {
         inp.value = quote;
+        saveProfileChanges(true);
         showToast(`Status updated: "${quote}"`);
       }
     }
@@ -5068,10 +5073,14 @@
       if (!p || !p.userId) return;
       const uid = normalizeUserId(p.userId);
       try {
-        localStorage.setItem(`virgo_profile_${uid}`, JSON.stringify(p));
-        localStorage.setItem("virgo_active_profile", JSON.stringify(p));
+        const jsonStr = JSON.stringify(p);
+        localStorage.setItem(`virgo_profile_${uid}`, jsonStr);
+        localStorage.setItem("virgo_active_profile", jsonStr);
         if (p.avatarUrl) {
           localStorage.setItem(`virgo_avatar_${uid}`, p.avatarUrl);
+        }
+        if (window.AndroidNative && typeof window.AndroidNative.saveProfileNative === "function") {
+          window.AndroidNative.saveProfileNative(jsonStr);
         }
       } catch(e) {
         console.warn("saveProfileLocally warning:", e);
@@ -5093,12 +5102,19 @@
             return parsed;
           }
         }
-        // ONLY fallback to virgo_active_profile if the requested user IS our own account!
+        // ONLY fallback to virgo_active_profile or native store if the requested user IS our own account!
         if (myUid && uid === myUid) {
           const activeRaw = localStorage.getItem("virgo_active_profile");
           if (activeRaw) {
             const parsed = JSON.parse(activeRaw);
             if (parsed) return parsed;
+          }
+          if (window.AndroidNative && typeof window.AndroidNative.getProfileNative === "function") {
+            const nativeRaw = window.AndroidNative.getProfileNative();
+            if (nativeRaw && nativeRaw.trim().length > 2) {
+              const parsed = JSON.parse(nativeRaw);
+              if (parsed) return parsed;
+            }
           }
         }
       } catch(e) {}
@@ -5154,6 +5170,8 @@
         drawer.classList.add("open");
         loadMyProfile();
       } else {
+        // Auto-save any pending profile input changes silently before closing
+        saveProfileChanges(true);
         drawer.classList.remove("open");
       }
     }
@@ -5164,7 +5182,7 @@
         if (!activeUser) return;
         const cleanId = normalizeUserId(activeUser);
 
-        // 1. Immediately hydrate from local storage so UI is never blank
+        // 1. Immediately hydrate from local storage & native store so UI is never blank
         const localP = getLocalProfile(cleanId);
         if (localP) {
           applyProfileToUI(localP);
@@ -5175,16 +5193,17 @@
         if (res.ok) {
           const serverP = await res.json();
           if (serverP) {
-            const isServerDefault = (!serverP.avatarUrl && (serverP.displayName === cleanId.split("@")[0]) && (serverP.about === "In the stars" || serverP.about === "Hey there! I am using Virgo."));
-            
-            if (isServerDefault && localP && (localP.displayName !== cleanId.split("@")[0] || localP.about !== "In the stars" || localP.avatarUrl)) {
-              // Server SQLite lost data on redeploy/spin-down. Restore from client!
+            const serverTime = serverP.updatedAt || 0;
+            const localTime = (localP && localP.updatedAt) || 0;
+
+            if (localP && localTime > serverTime) {
+              // Local changes are NEWER than server. Push local edits to server!
               fetch(`${BACKEND_BASE}/api/profile`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(localP)
               }).catch(() => {});
-            } else {
+            } else if (serverP.displayName || serverP.avatarUrl || serverP.about) {
               // Merge server data with local cache
               const merged = {
                 userId: cleanId,
@@ -5244,10 +5263,10 @@
       return fallback;
     }
 
-    async function saveProfileChanges() {
+    async function saveProfileChanges(silent = false) {
       const activeUser = myId || getPersistentAuthUser();
       if (!activeUser) {
-        showToast("Please sign in first.", "error");
+        if (!silent) showToast("Please sign in first.", "error");
         return;
       }
       const cleanId = normalizeUserId(activeUser);
@@ -5273,11 +5292,11 @@
         updatedAt: Date.now()
       };
 
-      // 1. INSTANT LOCAL SAVE (Permanent across app restarts)
+      // 1. INSTANT LOCAL & NATIVE SAVE (Permanent across app restarts)
       saveProfileLocally(profileObj);
       applyProfileToUI(profileObj);
 
-      if (saveBtn) {
+      if (saveBtn && !silent) {
         saveBtn.disabled = true;
         saveBtn.innerHTML = `<span class="auth-spinner"></span> Saving...`;
       }
@@ -5288,18 +5307,22 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(profileObj)
         });
-        if (res.ok) {
-          showToast("Profile changes saved permanently! ✨");
-        } else {
-          showToast("Saved locally on your device! ✨");
+        if (!silent) {
+          if (res.ok) {
+            showToast("Profile changes saved permanently! ✨");
+          } else {
+            showToast("Saved locally on your device! ✨");
+          }
+          refreshSidebarContacts();
+          setTimeout(() => toggleProfileDrawer(false), 500);
         }
-        refreshSidebarContacts();
-        setTimeout(() => toggleProfileDrawer(false), 500);
       } catch (e) {
-        showToast("Saved locally on your device! ✨");
-        setTimeout(() => toggleProfileDrawer(false), 500);
+        if (!silent) {
+          showToast("Saved locally on your device! ✨");
+          setTimeout(() => toggleProfileDrawer(false), 500);
+        }
       } finally {
-        if (saveBtn) {
+        if (saveBtn && !silent) {
           saveBtn.disabled = false;
           saveBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg><span>Save Profile Changes</span>`;
         }

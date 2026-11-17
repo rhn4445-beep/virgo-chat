@@ -133,6 +133,9 @@ public class MainActivity extends BridgeActivity {
         isAppInForeground = false;
         VirgoForegroundService.isActivityInForeground = false;
         try {
+            android.webkit.CookieManager.getInstance().flush();
+        } catch (Exception ignored) {}
+        try {
             if (this.bridge != null && this.bridge.getWebView() != null) {
                 this.bridge.getWebView().resumeTimers();
                 this.bridge.getWebView().evaluateJavascript("if (window.onVirgoPause) window.onVirgoPause();", null);
@@ -588,6 +591,30 @@ public class MainActivity extends BridgeActivity {
                                     Toast.makeText(getApplicationContext(), "Failed saving file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                                 }
                             });
+                        }
+
+                        @JavascriptInterface
+                        public void saveProfileNative(String profileJson) {
+                            try {
+                                getSharedPreferences("virgo_prefs", Context.MODE_PRIVATE)
+                                    .edit()
+                                    .putString("native_saved_profile", profileJson)
+                                    .apply();
+                                Log.d(TAG, "Saved profile to native SharedPreferences successfully");
+                            } catch (Exception e) {
+                                Log.e(TAG, "saveProfileNative error: " + e.getMessage());
+                            }
+                        }
+
+                        @JavascriptInterface
+                        public String getProfileNative() {
+                            try {
+                                return getSharedPreferences("virgo_prefs", Context.MODE_PRIVATE)
+                                    .getString("native_saved_profile", "");
+                            } catch (Exception e) {
+                                Log.e(TAG, "getProfileNative error: " + e.getMessage());
+                                return "";
+                            }
                         }
                     }, "AndroidNative");
                     Log.d(TAG, "AndroidNative interface successfully attached to WebView");
