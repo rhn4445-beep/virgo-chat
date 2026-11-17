@@ -3843,7 +3843,7 @@
     const isLocalDev = !isCapacitor && window.location.protocol === "http:" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (window.location.port !== "");
     const BACKEND_BASE = isLocalDev ? `http://${window.location.host}` : "https://virgo-chat.onrender.com";
     
-    let activeClientVersion = localStorage.getItem("virgo_active_client_version") || "v2.9.2";
+    let activeClientVersion = localStorage.getItem("virgo_active_client_version") || "v2.9.3";
     let updateBannerDismissed = false;
     let updateModalDismissed = false;
     let pendingNewVersion = "";

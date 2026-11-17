@@ -135,12 +135,9 @@ public class VirgoForegroundService extends Service {
                 .setContentIntent(pendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_MIN)
                 .setShowWhen(false)
-                .setOngoing(true);
+                .setOngoing(false);
 
-            android.graphics.Bitmap logo = NotificationHelper.getBitmapFromDrawable(this, R.mipmap.ic_launcher);
-            if (logo == null) {
-                logo = NotificationHelper.getBitmapFromDrawable(this, R.drawable.ic_virgo_logo);
-            }
+            android.graphics.Bitmap logo = NotificationHelper.getVirgoLogoBitmap(this);
             if (logo != null) {
                 builder.setLargeIcon(logo);
             }

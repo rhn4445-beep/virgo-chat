@@ -60,6 +60,15 @@ public class NotificationHelper {
         return s;
     }
 
+    public static Bitmap getVirgoLogoBitmap(Context context) {
+        if (context == null) return null;
+        try {
+            Bitmap b = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_virgo_logo);
+            if (b != null) return b;
+        } catch (Throwable ignored) {}
+        return getBitmapFromDrawable(context, R.mipmap.ic_launcher);
+    }
+
     public static Bitmap getBitmapFromDrawable(Context context, int drawableId) {
         if (context == null) return null;
         try {
@@ -208,10 +217,7 @@ public class NotificationHelper {
                 .setContentIntent(pendingIntent);
 
             // Display official Virgo celestial lotus logo
-            Bitmap appLogo = getBitmapFromDrawable(context, R.mipmap.ic_launcher);
-            if (appLogo == null) {
-                appLogo = getBitmapFromDrawable(context, R.drawable.ic_virgo_logo);
-            }
+            Bitmap appLogo = getVirgoLogoBitmap(context);
             if (appLogo != null) {
                 builder.setLargeIcon(appLogo);
             }
