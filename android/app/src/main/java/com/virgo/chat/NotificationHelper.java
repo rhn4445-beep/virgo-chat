@@ -15,6 +15,7 @@ import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.service.notification.StatusBarNotification;
@@ -159,9 +160,7 @@ public class NotificationHelper {
             String rawSender = sender.trim().toLowerCase();
             String prefixSender = rawSender.contains("@") ? rawSender.split("@")[0] : rawSender;
             int senderNotifId = Math.abs(normSender.hashCode() % 100000000);
-            int notifId = (msgId != null && !msgId.trim().isEmpty())
-                ? Math.abs(msgId.hashCode() % 100000000)
-                : senderNotifId;
+            int notifId = senderNotifId; // Deterministic per-sender ID so all alerts from this contact map to one notification
 
             String senderTag = "msg_" + normSender;
             intent.putExtra("notif_id", notifId);
@@ -202,6 +201,11 @@ public class NotificationHelper {
                 idSet.add(senderNotifId);
             }
 
+            Bundle extras = new Bundle();
+            extras.putString("virgo_sender", normSender);
+            extras.putString("virgo_raw_sender", rawSender);
+            extras.putString("virgo_prefix", prefixSender);
+
             NotificationCompat.Builder builder = new NotificationCompat.Builder(context, MSG_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_virgo)
                 .setContentTitle(sender)
@@ -214,6 +218,7 @@ public class NotificationHelper {
                 .setVibrate(new long[]{0, 250, 150, 250})
                 .setColor(0xFFF5C542)
                 .setAutoCancel(true)
+                .addExtras(extras)
                 .setContentIntent(pendingIntent);
 
             // Display official Virgo celestial lotus logo
@@ -225,7 +230,6 @@ public class NotificationHelper {
             NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (notificationManager != null) {
                 notificationManager.notify(senderTag, notifId, builder.build());
-                notificationManager.notify(notifId, builder.build());
                 Log.d(TAG, "✅ Posted notification [id=" + notifId + ", tag=" + senderTag + ", from=" + sender + "] with app logo");
             }
         } catch (Throwable t) {
@@ -275,32 +279,66 @@ public class NotificationHelper {
                 StatusBarNotification[] active = nm.getActiveNotifications();
                 if (active != null) {
                     for (StatusBarNotification sbn : active) {
-                        if (sbn.getId() == 2001) continue; // Keep background service running
+                        int sbnId = sbn.getId();
+                        if (sbnId == 2001) continue; // Keep background sync service running
 
                         android.app.Notification notif = sbn.getNotification();
                         if (notif == null) continue;
 
-                        CharSequence titleCs = notif.extras != null ? notif.extras.getCharSequence(android.app.Notification.EXTRA_TITLE) : null;
+                        Bundle notifExtras = notif.extras;
+                        String extraSender = notifExtras != null ? notifExtras.getString("virgo_sender", "") : "";
+                        String extraRaw = notifExtras != null ? notifExtras.getString("virgo_raw_sender", "") : "";
+                        String extraPrefix = notifExtras != null ? notifExtras.getString("virgo_prefix", "") : "";
+
+                        CharSequence titleCs = notifExtras != null ? notifExtras.getCharSequence(android.app.Notification.EXTRA_TITLE) : null;
                         String notifTitle = titleCs != null ? titleCs.toString().trim().toLowerCase() : "";
+
+                        CharSequence textCs = notifExtras != null ? notifExtras.getCharSequence(android.app.Notification.EXTRA_TEXT) : null;
+                        String notifText = textCs != null ? textCs.toString().trim().toLowerCase() : "";
+
                         String sbnTag = sbn.getTag() != null ? sbn.getTag().toLowerCase() : "";
 
                         boolean matches = false;
-                        if (!notifTitle.isEmpty()) {
+
+                        // Check 1: Custom extras directly embedded
+                        if (!extraSender.isEmpty() && (extraSender.equals(norm) || extraSender.equals(raw) || extraSender.equals(prefix))) {
+                            matches = true;
+                        } else if (!extraRaw.isEmpty() && (extraRaw.equals(raw) || extraRaw.equals(norm) || extraRaw.equals(prefix))) {
+                            matches = true;
+                        } else if (!extraPrefix.isEmpty() && extraPrefix.equals(prefix)) {
+                            matches = true;
+                        }
+
+                        // Check 2: Title matches sender or prefix
+                        if (!matches && !notifTitle.isEmpty()) {
                             String titlePrefix = notifTitle.contains("@") ? notifTitle.split("@")[0] : notifTitle;
                             String normTitle = normalizeSenderKey(notifTitle);
                             if (notifTitle.equals(raw) || notifTitle.equals(norm) || notifTitle.equals(prefix)
-                                || titlePrefix.equals(prefix) || normTitle.equals(norm)) {
+                                || titlePrefix.equals(prefix) || normTitle.equals(norm)
+                                || notifTitle.contains(prefix) || prefix.contains(notifTitle)) {
                                 matches = true;
                             }
                         }
-                        if (!sbnTag.isEmpty()) {
+
+                        // Check 3: Tag matches sender
+                        if (!matches && !sbnTag.isEmpty()) {
                             if (sbnTag.contains(raw) || sbnTag.contains(norm) || sbnTag.contains(prefix)) {
                                 matches = true;
                             }
                         }
 
+                        // Check 4: Body text contains sender
+                        if (!matches && !notifText.isEmpty()) {
+                            if (notifText.contains(raw) || notifText.contains(prefix)) {
+                                matches = true;
+                            }
+                        }
+
                         if (matches) {
-                            nm.cancel(sbn.getTag(), sbn.getId());
+                            if (sbn.getTag() != null) {
+                                nm.cancel(sbn.getTag(), sbn.getId());
+                            }
+                            nm.cancel(sbn.getId());
                             Log.d(TAG, "🗑️ Active status bar sweep dismissed notification: id=" + sbn.getId() + ", tag=" + sbn.getTag() + ", title=" + notifTitle);
                         }
                     }

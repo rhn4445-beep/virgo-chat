@@ -48,3 +48,26 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+// Clear active notifications when messages are read inside the app
+self.addEventListener('message', (event) => {
+  if (event.data && (event.data.action === 'clearNotifications' || event.data.action === 'clearAll')) {
+    const target = (event.data.sender || '').toLowerCase().trim();
+    const prefix = target.includes('@') ? target.split('@')[0] : target;
+    self.registration.getNotifications().then((notifications) => {
+      notifications.forEach((n) => {
+        if (!target) {
+          n.close();
+        } else {
+          const title = (n.title || '').toLowerCase();
+          const body = (n.body || '').toLowerCase();
+          if (title.includes(target) || body.includes(target) || (prefix && (title.includes(prefix) || body.includes(prefix)))) {
+            n.close();
+          } else {
+            n.close();
+          }
+        }
+      });
+    });
+  }
+});
